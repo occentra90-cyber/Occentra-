@@ -1,0 +1,1 @@
+import {NextResponse} from 'next/server';export async function POST(){return NextResponse.json({error:'Checkout not configured. No payment attempted.'},{status:503})}

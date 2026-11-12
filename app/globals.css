@@ -149,3 +149,13 @@
   .featured-gallery .tileinfo strong{white-space:nowrap}
 }
 @media(max-width:380px){.featured-gallery{gap:5px}.featured-gallery .mini{height:300px;padding-left:3px;padding-right:3px}.featured-gallery .mini-sample{font-size:7px}}
+
+/* Birthday animated mode: restrained themed movement, legible fixed content. */
+.preview.birthday.immersive .balloon{animation:sway 5s ease-in-out infinite alternate}
+.preview.birthday.immersive .light{animation:glow 2.8s ease-in-out infinite alternate}
+.preview.birthday.immersive[data-design="Space"] .preview-stars,
+.preview.birthday.immersive[data-design="Stargazing"] .preview-stars{animation:glow 2s ease-in-out infinite alternate}
+.preview.birthday.immersive[data-design="Racing Cars"] .balloon{animation:sway 6s ease-in-out infinite alternate}
+.preview.birthday.immersive[data-design="Dinosaur"] .balloon,
+.preview.birthday.immersive[data-design="Safari"] .balloon{animation:sway 7s ease-in-out infinite alternate}
+@media(prefers-reduced-motion:reduce){.preview.birthday.immersive .balloon,.preview.birthday.immersive .light,.preview.birthday.immersive .sparkle,.preview.birthday.immersive .preview-stars{animation:none!important}}

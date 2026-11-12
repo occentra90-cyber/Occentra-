@@ -96,3 +96,16 @@
 /* Homepage: exactly three featured templates in one horizontal row. Full category keeps the grid. */
 .featured-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 @media(max-width:750px){.featured-gallery{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;gap:12px;padding-bottom:12px}.featured-gallery .tile{flex:0 0 44%;min-width:0;scroll-snap-align:start}.featured-gallery .mini{height:190px}.heading button{white-space:nowrap}}
+
+/* Finished-information catalogue previews */
+.mini{padding-bottom:60px}
+.mini-sample{font:clamp(7px,.95vw,11px)/1.65 Arial,Helvetica,sans-serif;margin-top:12px;max-width:100%;position:relative;z-index:2}
+.mini-sample b{font-weight:700}
+.mini.baby:after{bottom:3px}
+.mini.baby h3{margin:10px 0 6px}
+.mini.baby strong{font-size:clamp(10px,1.3vw,15px)}
+.mini.baby .mini-sample{margin-top:9px}
+.preview.immersive{box-shadow:inset 0 0 0 7px #ffffff55,0 0 30px #e6c98b66;background:radial-gradient(circle at 50% 20%,#fffdfb,transparent 50%),linear-gradient(150deg,#fffdf8,var(--accent))}
+.preview.immersive .preview-stars{animation:glow 2.6s ease-in-out infinite alternate}
+.preview.immersive .sparkle{pointer-events:none}
+@media(max-width:750px){.mini{padding:13px 6px 48px}.mini-sample{font-size:7px;line-height:1.35;margin-top:6px}.mini.baby strong{font-size:10px}.mini.baby h3{font-size:17px;margin:7px 0 4px}.featured-gallery .mini{height:210px}}

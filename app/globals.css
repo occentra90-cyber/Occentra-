@@ -92,3 +92,7 @@
 .mini[data-design="Cinema"]:after,.preview:not(.cv)[data-design="Cinema"]:after{content:"🎞"}
 
 .mini[data-design="Starry Night"],.mini[data-design="Space"],.mini[data-design="Stargazing"]{background:linear-gradient(145deg,#263e63,#7182aa);color:#fff}.mini[data-design="Botanical Green"],.mini[data-design="Woodland Friends"]{background:linear-gradient(145deg,#f8f5e9,#b3c9b2)}.mini[data-design="Classic Navy"],.mini[data-design="Charcoal & Bronze"]{background:linear-gradient(145deg,#1d2c40,#41536b);color:#fff}.mini[data-design="Floral Romance"],.mini[data-design="Peach Roses"],.mini[data-design="Pink Lotus"]{background:linear-gradient(145deg,#fff8f3,#eac0c5)}.mini[data-design="Rainbow Bliss"],.mini[data-design="Boho Rainbow"]{background:linear-gradient(130deg,#f7d5c5,#f4e9b3 45%,#b6d7d3)}
+
+/* Homepage: exactly three featured templates in one horizontal row. Full category keeps the grid. */
+.featured-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media(max-width:750px){.featured-gallery{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;gap:12px;padding-bottom:12px}.featured-gallery .tile{flex:0 0 44%;min-width:0;scroll-snap-align:start}.featured-gallery .mini{height:190px}.heading button{white-space:nowrap}}

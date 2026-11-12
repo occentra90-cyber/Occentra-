@@ -109,3 +109,25 @@
 .preview.immersive .preview-stars{animation:glow 2.6s ease-in-out infinite alternate}
 .preview.immersive .sparkle{pointer-events:none}
 @media(max-width:750px){.mini{padding:13px 6px 48px}.mini-sample{font-size:7px;line-height:1.35;margin-top:6px}.mini.baby strong{font-size:10px}.mini.baby h3{font-size:17px;margin:7px 0 4px}.featured-gallery .mini{height:210px}}
+
+/* Keep complete sample information legible and separate from decorative artwork. */
+.mini{height:330px;justify-content:flex-start;padding:22px 12px 92px;overflow:hidden}
+.mini small,.mini h3,.mini strong,.mini-sample{position:relative;z-index:2;flex-shrink:0}
+.mini h3{margin:10px 0 6px;font-size:clamp(18px,2vw,25px)}
+.mini strong{font-size:clamp(12px,1.4vw,16px)}
+.mini-sample{font-size:clamp(10px,1vw,12px);line-height:1.4;margin-top:10px;overflow-wrap:anywhere}
+.mini:after,.mini.baby:after{bottom:12px;font-size:56px;z-index:1}
+.preview:not(.cv){padding-bottom:125px}
+.preview:not(.cv):after{bottom:24px;z-index:0}
+@media(max-width:750px){
+ .mini,.featured-gallery .mini{height:315px;padding:15px 8px 85px}
+ .mini h3,.mini.baby h3{font-size:17px;margin:8px 0 5px}
+ .mini strong,.mini.baby strong{font-size:11px}
+ .mini-sample,.mini.baby .mini-sample{font-size:9px;line-height:1.35;margin-top:9px}
+ .mini:after,.mini.baby:after{bottom:10px;font-size:50px}
+}
+@media(max-width:420px){
+ .featured-gallery .tile{flex-basis:46%}
+ .mini,.featured-gallery .mini{height:330px}
+ .mini-sample,.mini.baby .mini-sample{font-size:9px;line-height:1.4}
+}

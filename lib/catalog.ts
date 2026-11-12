@@ -1,10 +1,10 @@
 export type Category='cv'|'baby'|'wedding'|'birthday';
 export type Design={id:string;category:Category;name:string;accent:string};
-export const groups:[Category,string,string][]=[['cv','Editable CVs','All templates R20'],['baby','Baby Shower','Stationary R49 · Living 3D R99'],['wedding','Weddings','Stationary R79'],['birthday','Birthdays','Stationary R49']];
+export const groups:[Category,string,string][]=[['cv','Editable CVs','All templates R20'],['baby','Baby Shower','Stationary R49 · Living 3D R99'],['wedding','Weddings','Stationary R79'],['birthday','Birthdays','Stationary R49 · Animated R99']];
 const names:Record<Category,string[]>={
 cv:['Classic','Modern','Essential','Clean Lines','Graduate','Academic','Student','Early Career','Professional','Executive'],
 baby:['Little Explorer','Sailboat Adventure','Starry Night','Construction Fun','Sports All-Star','Dino Friend','Floral Elegance','Princess Castle','Butterfly Garden','Sweet Dreams','Classic Carriage','Ballerina Dreams','Woodland Friends','Hot Air Balloon','Baby Mobile','Rainbow Bliss','Safari Friends','Boho Rainbow'],
 wedding:['Classic Elegance','Botanical Green','Floral Romance','Modern Minimalist','Lavender Garden','Peach Roses','Peacock Elegance','Purple Orchids','Tropical Hibiscus','Bird of Paradise','King Protea','Pink Lotus','Heliconia','Spotted Orchids','White Frangipani','Pink Ginger Lily','Passionflower','Calla Lilies','Blue Hydrangeas'],
 birthday:['Space','Firefighter','Robot','Sports','Racing Cars','Dinosaur','Construction','Pirate','Superhero','Underwater','Safari','Camping','Gaming','Basketball','Skateboarding','Football','Outdoor Adventure','Electric Guitar','Movie Night','Fishing','Music & Chill','Photography & Memories','Fashion & Glam','Music Star','Creative Artist','Cozy Book Lover','Paris Adventure','Stargazing','Fitness & Lifestyle','Baking Party','Floral Elegance','Disco & Sparkle','Classic Navy','Tailored Stripes','Mountains','Charcoal & Bronze','Motorcycle','Golf','Coffee','Compass','Fitness','Vintage Gentleman','City Skyline','Cinema']};
 export const designs:Design[]=groups.flatMap(([category])=>names[category].map((name,i)=>({id:category+'-'+i,category,name,accent:['#a8c6d9','#dfb9c5','#b7c7b3','#e2c9a4'][i%4]})));
-export const price=(category:Category,living=false)=>category==='cv'?20:category==='baby'?(living?99:49):category==='wedding'?79:49;
+export const price=(category:Category,living=false)=>category==='cv'?20:(category==='baby'||category==='birthday')?(living?99:49):category==='wedding'?79:49;

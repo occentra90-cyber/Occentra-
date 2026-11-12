@@ -1,1 +1,94 @@
 *{box-sizing:border-box}body{margin:0;background:#faf8f4;color:#18283c;font-family:Arial,Helvetica,sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}header{background:#14263d;color:#fff;padding:22px 5%;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}.logo{font-family:Georgia,serif;font-size:29px;letter-spacing:3px}.logo small{display:block;font:10px Arial;letter-spacing:2px;color:#d6c39d;margin-top:6px}nav{display:flex;gap:18px;flex-wrap:wrap}nav button{border:0;background:none;color:#fff}.hero{text-align:center;padding:85px 20px;background:linear-gradient(125deg,#14263d,#2c4560);color:#fff}.hero h1{font:clamp(36px,6vw,70px) Georgia,serif;margin:14px 0}.hero em{color:#e0c59b}.hero p{line-height:1.7;color:#e0e4eb}.goldbtn{background:#b9955b;color:white;border:0;border-radius:5px;padding:14px 24px;margin-top:15px}.container{max-width:1170px;margin:auto;padding:38px 22px}.filters{display:flex;gap:10px;flex-wrap:wrap}.filters button,.back,.mode button{background:white;border:1px solid #d6d5d0;border-radius:5px;padding:11px 16px}.filters .active,.mode .active{background:#1b3049;color:#fff}.section{margin:45px 0}.heading{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #c8a46e;padding-bottom:14px;gap:15px}.heading h2{font:30px Georgia,serif;margin:0}.heading p{color:#68717d;margin:8px 0}.heading button{background:none;border:0;color:#8e683c}.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:23px;margin-top:22px}.tile{padding:0;text-align:left;border:1px solid #e5e2dc;background:white;border-radius:8px;overflow:hidden;box-shadow:0 6px 22px #17293b16}.mini{height:255px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;background:linear-gradient(145deg,#fff,var(--accent));font-family:Georgia,serif}.mini.baby{border:15px solid #e6f1f8}.mini.wedding{border:15px double #e6d2b6}.mini.birthday{border:15px solid #f0e6d8}.mini.cv{background:#fff;border:18px solid #e9e9e9}.mini small{font:10px Arial;letter-spacing:2px}.mini h3{font-size:28px;margin:18px 0}.mini strong{font-size:17px}.tileinfo{padding:16px;display:flex;justify-content:space-between;gap:8px}.tileinfo strong{color:#956e39}.editorheading{margin:25px 0}.editorheading h1{font:38px Georgia}.editlayout{display:grid;grid-template-columns:1.1fr .9fr;gap:30px;margin-top:22px}.preview{min-height:620px;background:linear-gradient(140deg,#fff,var(--accent));border:14px double #dfc9a7;position:relative;text-align:center;padding:55px 35px;overflow:hidden}.preview h2{font:clamp(32px,5vw,54px) Georgia,serif}.preview .script{font:italic 28px Georgia;color:#97764d}.preview .details{display:grid;gap:10px;margin:30px auto}.preview p{line-height:1.7}.preview.cv{background:#fff;border:1px solid #ddd;text-align:left}.preview.cv h2{font:32px Arial}.preview.cv section{border-top:1px solid #ccc;margin:24px 0;padding-top:12px}.preview.cv h3{font-size:15px;letter-spacing:1px}.editor{background:#fff;border:1px solid #e1dfda;padding:25px;border-radius:9px}.editor label{display:block;margin:14px 0;color:#3b4653;font-size:14px}.editor input:not([type=checkbox]),.editor textarea{display:block;width:100%;padding:11px;border:1px solid #c9cdd0;border-radius:4px;margin-top:6px}.editor .check{display:flex;align-items:center;gap:8px}.mode{display:flex;gap:8px;flex-wrap:wrap}.hint{font-size:13px;color:#6d7781;line-height:1.6}.notice{background:#f7edd9;padding:12px}.balloon{position:absolute;border-radius:50% 50% 48% 48%;width:30px;height:42px;opacity:.7;animation:sway 4s ease-in-out infinite alternate}.b1{background:#b1d3e9;top:55px;left:8%}.b2{background:#e8b8c7;top:90px;right:10%;animation-delay:1s}.light{position:absolute;top:20%;right:20%;font-size:22px;color:#f3d98b;animation:glow 2s infinite alternate}.sparkle{position:absolute;top:-20px;animation:fall 5s linear infinite;color:#fff4c5}@keyframes sway{to{transform:translateX(15px) rotate(6deg)}}@keyframes glow{to{opacity:.2;filter:blur(3px)}}@keyframes fall{to{transform:translateY(680px);opacity:0}}footer{background:#14263d;color:#fff;text-align:center;padding:35px;margin-top:45px}@media(max-width:750px){.gallery{grid-template-columns:repeat(2,1fr);gap:12px}.mini{height:195px}.mini h3{font-size:21px}.editlayout{grid-template-columns:1fr}.preview{min-height:530px}.heading h2{font-size:25px}}@media(max-width:420px){.gallery{grid-template-columns:repeat(2,1fr)}.tileinfo{font-size:12px;padding:10px}}@media print{header,footer,.editor,.back,.mode,.editorheading,.hint{display:none!important}.editlayout{display:block}.preview{border:0;min-height:0}.container{padding:0}}
+/* Illustrated catalog cards — template-specific motifs, subtle paper finishes */
+.mini{position:relative;isolation:isolate;justify-content:flex-start;padding-top:24px;overflow:hidden;background:radial-gradient(circle at 12% 10%,#ffffffc9,transparent 35%),linear-gradient(145deg,#fff9f3,var(--accent))}
+.mini:before{content:"";position:absolute;inset:9px;border:1px solid #ffffffb8;pointer-events:none;z-index:-1}
+.mini:after{content:"✦";position:absolute;left:50%;bottom:8px;transform:translateX(-50%);font-size:57px;line-height:1.1;filter:drop-shadow(0 5px 3px #14263d18);pointer-events:none}
+.mini h3{font-size:clamp(17px,2.4vw,25px);margin:13px 0 8px;line-height:1.15}.mini strong{font-size:clamp(13px,1.8vw,17px);line-height:1.3}.mini p{display:none}.mini small{font-size:9px;letter-spacing:1.6px}.mini.cv{background:#fff;justify-content:center;padding-top:0}.mini.cv:after{content:"";width:64%;height:1px;background:#9da5ac;bottom:32px}.mini.cv h3{font-family:Arial,sans-serif;letter-spacing:1px}.mini.baby{border:11px solid #e6f1f8}.mini.wedding{border:11px double #e6d2b6}.mini.birthday{border:11px solid #f0e6d8}
+.preview:not(.cv){background:radial-gradient(circle at 10% 10%,#ffffffb0,transparent 38%),linear-gradient(150deg,#fffdf8,var(--accent));box-shadow:inset 0 0 0 7px #ffffff55}
+.preview:not(.cv):before{content:"";position:absolute;inset:18px;border:1px solid #ffffffaa;pointer-events:none}
+.preview:not(.cv):after{content:"✦";position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:56px;opacity:.78;pointer-events:none}
+.preview:not(.cv)>*{position:relative;z-index:1}
+.preview.baby{border-color:#b6d5e4}.preview.wedding{border-color:#d2ae82}.preview.birthday{border-color:#e1c49e}
+@media(max-width:750px){.mini{padding:15px 8px 10px}.mini:after{font-size:39px;bottom:7px}.mini h3{font-size:19px}.mini strong{font-size:14px}.mini small{font-size:8px}.preview{padding:45px 25px}}
+.mini[data-design="Little Explorer"]:after,.preview:not(.cv)[data-design="Little Explorer"]:after{content:"🧸"}
+.mini[data-design="Sailboat Adventure"]:after,.preview:not(.cv)[data-design="Sailboat Adventure"]:after{content:"⛵"}
+.mini[data-design="Starry Night"]:after,.preview:not(.cv)[data-design="Starry Night"]:after{content:"🌙"}
+.mini[data-design="Construction Fun"]:after,.preview:not(.cv)[data-design="Construction Fun"]:after{content:"🚜"}
+.mini[data-design="Sports All-Star"]:after,.preview:not(.cv)[data-design="Sports All-Star"]:after{content:"⚽"}
+.mini[data-design="Dino Friend"]:after,.preview:not(.cv)[data-design="Dino Friend"]:after{content:"🦕"}
+.mini[data-design="Floral Elegance"]:after,.preview:not(.cv)[data-design="Floral Elegance"]:after{content:"🌸"}
+.mini[data-design="Princess Castle"]:after,.preview:not(.cv)[data-design="Princess Castle"]:after{content:"🏰"}
+.mini[data-design="Butterfly Garden"]:after,.preview:not(.cv)[data-design="Butterfly Garden"]:after{content:"🦋"}
+.mini[data-design="Sweet Dreams"]:after,.preview:not(.cv)[data-design="Sweet Dreams"]:after{content:"☁️"}
+.mini[data-design="Classic Carriage"]:after,.preview:not(.cv)[data-design="Classic Carriage"]:after{content:"🎠"}
+.mini[data-design="Ballerina Dreams"]:after,.preview:not(.cv)[data-design="Ballerina Dreams"]:after{content:"🩰"}
+.mini[data-design="Woodland Friends"]:after,.preview:not(.cv)[data-design="Woodland Friends"]:after{content:"🦊"}
+.mini[data-design="Hot Air Balloon"]:after,.preview:not(.cv)[data-design="Hot Air Balloon"]:after{content:"🎈"}
+.mini[data-design="Baby Mobile"]:after,.preview:not(.cv)[data-design="Baby Mobile"]:after{content:"🪁"}
+.mini[data-design="Rainbow Bliss"]:after,.preview:not(.cv)[data-design="Rainbow Bliss"]:after{content:"🌈"}
+.mini[data-design="Safari Friends"]:after,.preview:not(.cv)[data-design="Safari Friends"]:after{content:"🦒"}
+.mini[data-design="Boho Rainbow"]:after,.preview:not(.cv)[data-design="Boho Rainbow"]:after{content:"🌈"}
+.mini[data-design="Classic Elegance"]:after,.preview:not(.cv)[data-design="Classic Elegance"]:after{content:"❦"}
+.mini[data-design="Botanical Green"]:after,.preview:not(.cv)[data-design="Botanical Green"]:after{content:"🌿"}
+.mini[data-design="Floral Romance"]:after,.preview:not(.cv)[data-design="Floral Romance"]:after{content:"🌹"}
+.mini[data-design="Modern Minimalist"]:after,.preview:not(.cv)[data-design="Modern Minimalist"]:after{content:"◇"}
+.mini[data-design="Lavender Garden"]:after,.preview:not(.cv)[data-design="Lavender Garden"]:after{content:"🪻"}
+.mini[data-design="Peach Roses"]:after,.preview:not(.cv)[data-design="Peach Roses"]:after{content:"🌹"}
+.mini[data-design="Peacock Elegance"]:after,.preview:not(.cv)[data-design="Peacock Elegance"]:after{content:"🦚"}
+.mini[data-design="Purple Orchids"]:after,.preview:not(.cv)[data-design="Purple Orchids"]:after{content:"🌺"}
+.mini[data-design="Tropical Hibiscus"]:after,.preview:not(.cv)[data-design="Tropical Hibiscus"]:after{content:"🌺"}
+.mini[data-design="Bird of Paradise"]:after,.preview:not(.cv)[data-design="Bird of Paradise"]:after{content:"🌺"}
+.mini[data-design="King Protea"]:after,.preview:not(.cv)[data-design="King Protea"]:after{content:"🌸"}
+.mini[data-design="Pink Lotus"]:after,.preview:not(.cv)[data-design="Pink Lotus"]:after{content:"🪷"}
+.mini[data-design="Heliconia"]:after,.preview:not(.cv)[data-design="Heliconia"]:after{content:"🌺"}
+.mini[data-design="Spotted Orchids"]:after,.preview:not(.cv)[data-design="Spotted Orchids"]:after{content:"🌸"}
+.mini[data-design="White Frangipani"]:after,.preview:not(.cv)[data-design="White Frangipani"]:after{content:"🌼"}
+.mini[data-design="Pink Ginger Lily"]:after,.preview:not(.cv)[data-design="Pink Ginger Lily"]:after{content:"🌷"}
+.mini[data-design="Passionflower"]:after,.preview:not(.cv)[data-design="Passionflower"]:after{content:"🌺"}
+.mini[data-design="Calla Lilies"]:after,.preview:not(.cv)[data-design="Calla Lilies"]:after{content:"🌷"}
+.mini[data-design="Blue Hydrangeas"]:after,.preview:not(.cv)[data-design="Blue Hydrangeas"]:after{content:"🪻"}
+.mini[data-design="Space"]:after,.preview:not(.cv)[data-design="Space"]:after{content:"🚀"}
+.mini[data-design="Firefighter"]:after,.preview:not(.cv)[data-design="Firefighter"]:after{content:"🚒"}
+.mini[data-design="Robot"]:after,.preview:not(.cv)[data-design="Robot"]:after{content:"🤖"}
+.mini[data-design="Sports"]:after,.preview:not(.cv)[data-design="Sports"]:after{content:"🏀"}
+.mini[data-design="Racing Cars"]:after,.preview:not(.cv)[data-design="Racing Cars"]:after{content:"🏎️"}
+.mini[data-design="Dinosaur"]:after,.preview:not(.cv)[data-design="Dinosaur"]:after{content:"🦖"}
+.mini[data-design="Construction"]:after,.preview:not(.cv)[data-design="Construction"]:after{content:"🚜"}
+.mini[data-design="Pirate"]:after,.preview:not(.cv)[data-design="Pirate"]:after{content:"🏴‍☠️"}
+.mini[data-design="Superhero"]:after,.preview:not(.cv)[data-design="Superhero"]:after{content:"⭐"}
+.mini[data-design="Underwater"]:after,.preview:not(.cv)[data-design="Underwater"]:after{content:"🐠"}
+.mini[data-design="Safari"]:after,.preview:not(.cv)[data-design="Safari"]:after{content:"🦁"}
+.mini[data-design="Camping"]:after,.preview:not(.cv)[data-design="Camping"]:after{content:"🏕️"}
+.mini[data-design="Gaming"]:after,.preview:not(.cv)[data-design="Gaming"]:after{content:"🎮"}
+.mini[data-design="Basketball"]:after,.preview:not(.cv)[data-design="Basketball"]:after{content:"🏀"}
+.mini[data-design="Skateboarding"]:after,.preview:not(.cv)[data-design="Skateboarding"]:after{content:"🛹"}
+.mini[data-design="Football"]:after,.preview:not(.cv)[data-design="Football"]:after{content:"⚽"}
+.mini[data-design="Outdoor Adventure"]:after,.preview:not(.cv)[data-design="Outdoor Adventure"]:after{content:"⛰️"}
+.mini[data-design="Electric Guitar"]:after,.preview:not(.cv)[data-design="Electric Guitar"]:after{content:"🎸"}
+.mini[data-design="Movie Night"]:after,.preview:not(.cv)[data-design="Movie Night"]:after{content:"🎬"}
+.mini[data-design="Fishing"]:after,.preview:not(.cv)[data-design="Fishing"]:after{content:"🎣"}
+.mini[data-design="Music & Chill"]:after,.preview:not(.cv)[data-design="Music & Chill"]:after{content:"🎧"}
+.mini[data-design="Photography & Memories"]:after,.preview:not(.cv)[data-design="Photography & Memories"]:after{content:"📷"}
+.mini[data-design="Fashion & Glam"]:after,.preview:not(.cv)[data-design="Fashion & Glam"]:after{content:"✨"}
+.mini[data-design="Music Star"]:after,.preview:not(.cv)[data-design="Music Star"]:after{content:"🎤"}
+.mini[data-design="Creative Artist"]:after,.preview:not(.cv)[data-design="Creative Artist"]:after{content:"🎨"}
+.mini[data-design="Cozy Book Lover"]:after,.preview:not(.cv)[data-design="Cozy Book Lover"]:after{content:"📚"}
+.mini[data-design="Paris Adventure"]:after,.preview:not(.cv)[data-design="Paris Adventure"]:after{content:"🗼"}
+.mini[data-design="Stargazing"]:after,.preview:not(.cv)[data-design="Stargazing"]:after{content:"🌟"}
+.mini[data-design="Fitness & Lifestyle"]:after,.preview:not(.cv)[data-design="Fitness & Lifestyle"]:after{content:"🌿"}
+.mini[data-design="Baking Party"]:after,.preview:not(.cv)[data-design="Baking Party"]:after{content:"🧁"}
+.mini[data-design="Disco & Sparkle"]:after,.preview:not(.cv)[data-design="Disco & Sparkle"]:after{content:"🪩"}
+.mini[data-design="Classic Navy"]:after,.preview:not(.cv)[data-design="Classic Navy"]:after{content:"◆"}
+.mini[data-design="Tailored Stripes"]:after,.preview:not(.cv)[data-design="Tailored Stripes"]:after{content:"▥"}
+.mini[data-design="Mountains"]:after,.preview:not(.cv)[data-design="Mountains"]:after{content:"⛰"}
+.mini[data-design="Charcoal & Bronze"]:after,.preview:not(.cv)[data-design="Charcoal & Bronze"]:after{content:"◆"}
+.mini[data-design="Motorcycle"]:after,.preview:not(.cv)[data-design="Motorcycle"]:after{content:"🏍"}
+.mini[data-design="Golf"]:after,.preview:not(.cv)[data-design="Golf"]:after{content:"⛳"}
+.mini[data-design="Coffee"]:after,.preview:not(.cv)[data-design="Coffee"]:after{content:"☕"}
+.mini[data-design="Compass"]:after,.preview:not(.cv)[data-design="Compass"]:after{content:"✧"}
+.mini[data-design="Fitness"]:after,.preview:not(.cv)[data-design="Fitness"]:after{content:"◈"}
+.mini[data-design="Vintage Gentleman"]:after,.preview:not(.cv)[data-design="Vintage Gentleman"]:after{content:"♠"}
+.mini[data-design="City Skyline"]:after,.preview:not(.cv)[data-design="City Skyline"]:after{content:"▥"}
+.mini[data-design="Cinema"]:after,.preview:not(.cv)[data-design="Cinema"]:after{content:"🎞"}
+
+.mini[data-design="Starry Night"],.mini[data-design="Space"],.mini[data-design="Stargazing"]{background:linear-gradient(145deg,#263e63,#7182aa);color:#fff}.mini[data-design="Botanical Green"],.mini[data-design="Woodland Friends"]{background:linear-gradient(145deg,#f8f5e9,#b3c9b2)}.mini[data-design="Classic Navy"],.mini[data-design="Charcoal & Bronze"]{background:linear-gradient(145deg,#1d2c40,#41536b);color:#fff}.mini[data-design="Floral Romance"],.mini[data-design="Peach Roses"],.mini[data-design="Pink Lotus"]{background:linear-gradient(145deg,#fff8f3,#eac0c5)}.mini[data-design="Rainbow Bliss"],.mini[data-design="Boho Rainbow"]{background:linear-gradient(130deg,#f7d5c5,#f4e9b3 45%,#b6d7d3)}

@@ -1,5 +1,5 @@
 export type Category = 'cv' | 'baby' | 'wedding' | 'birthday';
-export type Design = { id: string; category: Category; name: string; accent: string; layout?: string };
+export type Design = { id: string; category: Category; name: string; accent: string; layout?: string; collection?: string };
 
 export const groups: [Category, string, string][] = [
   ['cv', 'Editable CVs', 'All templates R20'],
@@ -24,7 +24,6 @@ const names: Record<Category, string[]> = {
     'Rainbow Bliss', 'Safari Friends', 'Boho Rainbow',
   ],
   wedding: [
-    // Classic & Minimalist (Page 1)
     'W1A – Classic Elegance I',
     'W1B – Classic Elegance II',
     'W1C – Classic Elegance III',
@@ -37,7 +36,6 @@ const names: Record<Category, string[]> = {
     'W5A – Modern Minimalist I',
     'W5B – Modern Minimalist II',
     'W5C – Modern Minimalist III',
-    // Maximalist collection (Page 2)
     'Art Deco Gold & Lilies',
     'Peacock Elegance',
     'Floral Arch Romance',
@@ -50,7 +48,6 @@ const names: Record<Category, string[]> = {
     'Vintage Travel',
     'Gothic Rose Chapel',
     'Enchanted Woodland',
-    // Exotic-flower collection (Pages 3–4)
     'King Protea',
     'Pink Lotus',
     'Heliconia',
@@ -75,6 +72,16 @@ const names: Record<Category, string[]> = {
   ],
 };
 
+function getWeddingCollection(name: string): string {
+  if (name.includes('Classic Elegance')) return 'classic';
+  if (name.includes('Botanical Green')) return 'botanical';
+  if (name.includes('Floral Romance')) return 'floral';
+  if (name.includes('Modern Minimalist')) return 'minimal';
+  if (name.includes('Peacock')) return 'peacock';
+  if (['Art Deco', 'Red & Gold', 'Royal Indian', 'Rustic', 'Winter', 'Tropical Sunset', 'Celestial', 'Vintage', 'Gothic', 'Enchanted', 'Floral Arch'].some(k => name.includes(k))) return 'maximalist';
+  return 'exotic';
+}
+
 export const designs: Design[] = groups.flatMap(([category]) =>
   names[category].map((name, i) => ({
     id: category + '-' + i,
@@ -82,6 +89,7 @@ export const designs: Design[] = groups.flatMap(([category]) =>
     name,
     accent: ['#a8c6d9', '#dfb9c5', '#b7c7b3', '#e2c9a4'][i % 4],
     layout: category === 'cv' ? ['a1', 'a2', 'b1', 'b2', 'c1', 'c2'][i] : undefined,
+    collection: category === 'wedding' ? getWeddingCollection(name) : undefined,
   }))
 );
 

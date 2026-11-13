@@ -1,0 +1,119 @@
+/* Interactive CV Templates – A1 to C2 */
+.cv-sheet {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 28px 32px;
+  max-width: 520px;
+  margin: 0 auto;
+  box-shadow: 0 8px 28px #00000018;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #1a1a1a;
+}
+.cv-sheet h1 {
+  text-align: center;
+  font-size: 22px;
+  margin: 0 0 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.cv-header {
+  margin: -28px -32px 16px;
+  padding: 14px 32px;
+  color: #fff;
+}
+.cv-header h1 {
+  color: #fff;
+  margin: 0;
+  text-align: left;
+}
+.cv-header.green { background: linear-gradient(90deg, #2e7d5b, #3d9b72); }
+.cv-header.blue-wave { background: linear-gradient(120deg, #1e6bb8, #4a9de0); border-radius: 0 0 40% 0; }
+.cv-header.dark { background: linear-gradient(90deg, #0d1b2a, #1b3a57); }
+
+.cv-bar {
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 5px 10px;
+  margin: 14px 0 8px;
+  letter-spacing: 0.3px;
+}
+.cv-bar.light-blue { background: #d6e8f5; color: #1a3a5c; }
+.cv-bar.grey { background: #e0e0e0; color: #333; }
+.cv-bar.green { background: #d4edda; color: #1e5c3a; }
+.cv-bar.blue { background: #d0e4f7; color: #1a4a7a; }
+.cv-bar.light { background: #e8f0f8; color: #1a3a5c; }
+
+.cv-row {
+  display: flex;
+  gap: 8px;
+  margin: 3px 0;
+  padding-left: 4px;
+}
+.cv-row span:first-child {
+  min-width: 160px;
+  color: #444;
+}
+.cv-row.icon span:first-child {
+  min-width: 170px;
+}
+
+.cv-sheet ul {
+  margin: 4px 0 8px 18px;
+  padding: 0;
+}
+.cv-sheet li {
+  margin: 2px 0;
+}
+.cv-note {
+  margin: 4px 0 0 4px;
+  font-style: italic;
+  color: #555;
+}
+.cv-summary {
+  margin: 4px 0 8px 4px;
+  line-height: 1.5;
+}
+.cv-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 4px;
+}
+.exp-list li {
+  margin-bottom: 6px;
+}
+
+/* Catalog cards for CVs */
+.mini.cv-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  height: 180px;
+  padding: 20px;
+  text-align: center;
+}
+.mini.cv-card strong {
+  font-size: 22px;
+  color: #1b3049;
+  margin-bottom: 6px;
+}
+.mini.cv-card span {
+  font-size: 13px;
+  color: #666;
+}
+.mini.cv-card[data-layout="a1"], .mini.cv-card[data-layout="a2"] { border-top: 5px solid #7eb8da; }
+.mini.cv-card[data-layout="b1"], .mini.cv-card[data-layout="b2"] { border-top: 5px solid #3d9b72; }
+.mini.cv-card[data-layout="c1"], .mini.cv-card[data-layout="c2"] { border-top: 5px solid #1b3a57; }
+
+@media print {
+  .cv-sheet {
+    box-shadow: none;
+    border: none;
+    max-width: none;
+  }
+}

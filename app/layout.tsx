@@ -1,5 +1,6 @@
 import './globals.css';
 import './cv-styles.css';
+import './wedding-styles.css';
 export const metadata = {
   title: 'Occentra | Design. Personalize. Celebrate.',
   description: 'Editable CVs and beautiful personalized invitations.',

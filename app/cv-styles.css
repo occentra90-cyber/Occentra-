@@ -85,30 +85,49 @@
   margin-bottom: 6px;
 }
 
-/* Catalog cards for CVs */
+/* Catalog cards for CVs – show real mini design */
 .mini.cv-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: block;
   background: #fff;
   border: 1px solid #e0e0e0;
-  height: 180px;
-  padding: 20px;
-  text-align: center;
+  height: 280px;
+  padding: 0;
+  overflow: hidden;
+  position: relative;
 }
-.mini.cv-card strong {
-  font-size: 22px;
-  color: #1b3049;
-  margin-bottom: 6px;
+.mini.cv-card .cv-mini-preview {
+  transform: scale(0.42);
+  transform-origin: top left;
+  width: 238%;
+  pointer-events: none;
+  padding: 12px 14px;
 }
-.mini.cv-card span {
-  font-size: 13px;
-  color: #666;
+.mini.cv-card .cv-mini-preview h1 {
+  font-size: 18px;
+  margin-bottom: 8px;
 }
-.mini.cv-card[data-layout="a1"], .mini.cv-card[data-layout="a2"] { border-top: 5px solid #7eb8da; }
-.mini.cv-card[data-layout="b1"], .mini.cv-card[data-layout="b2"] { border-top: 5px solid #3d9b72; }
-.mini.cv-card[data-layout="c1"], .mini.cv-card[data-layout="c2"] { border-top: 5px solid #1b3a57; }
+.mini.cv-card .cv-mini-preview .cv-bar {
+  font-size: 11px;
+  padding: 3px 8px;
+  margin: 8px 0 4px;
+}
+.mini.cv-card .cv-mini-preview .cv-row {
+  font-size: 11px;
+  margin: 1px 0;
+}
+.mini.cv-card .cv-mini-preview .cv-row span:first-child {
+  min-width: 110px;
+}
+.mini.cv-card .cv-mini-preview ul {
+  margin: 2px 0 4px 14px;
+  font-size: 11px;
+}
+.mini.cv-card[data-layout="a1"] { border-top: 4px solid #7eb8da; }
+.mini.cv-card[data-layout="a2"] { border-top: 4px solid #9e9e9e; }
+.mini.cv-card[data-layout="b1"] { border-top: 4px solid #3d9b72; }
+.mini.cv-card[data-layout="b2"] { border-top: 4px solid #1e6bb8; }
+.mini.cv-card[data-layout="c1"] { border-top: 4px solid #1b3a57; }
+.mini.cv-card[data-layout="c2"] { border-top: 4px solid #555; }
 
 @media print {
   .cv-sheet {

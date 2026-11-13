@@ -18,7 +18,6 @@ type Fields = {
   references: string;
   summary: string;
   activities: string;
-  // invitation fields kept for other categories
   subtitle: string;
   date: string;
   time: string;
@@ -53,48 +52,146 @@ const defaults: Fields = {
   phone: '071 000 0000',
 };
 
-function CVPreview({ layout, fields }: { layout?: string; fields: Fields }) {
+function CVPreview({ layout, fields, mini = false }: { layout?: string; fields: Fields; mini?: boolean }) {
   const skillList = fields.skills.split('\n').filter(Boolean);
   const expList = fields.experience.split('\n').filter(Boolean);
   const langList = fields.languages.split('\n').filter(Boolean);
   const actList = fields.activities.split('\n').filter(Boolean);
 
-  // A1 – Basic (Simple)
-  if (layout === 'a1') {
+  const content = (() => {
+    if (layout === 'a1') {
+      return (
+        <>
+          <h1>Curriculum Vitae</h1>
+          <div className="cv-bar light-blue">Personal Information</div>
+          <div className="cv-row"><span>Full Name</span><span>: {fields.name}</span></div>
+          <div className="cv-row"><span>Date of Birth</span><span>: {fields.dob}</span></div>
+          <div className="cv-row"><span>Contact No.</span><span>: {fields.contact}</span></div>
+          <div className="cv-row"><span>Email</span><span>: {fields.email}</span></div>
+          <div className="cv-row"><span>Address</span><span>: {fields.address}</span></div>
+          <div className="cv-bar light-blue">Education</div>
+          <div className="cv-row"><span>Highest Grade Completed</span><span>: {fields.education}</span></div>
+          <div className="cv-row"><span>School</span><span>: {fields.school}</span></div>
+          <div className="cv-row"><span>Year Completed</span><span>: {fields.year}</span></div>
+          <div className="cv-bar light-blue">Skills</div>
+          <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar light-blue">Work Experience (if any)</div>
+          <ul>{expList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar light-blue">Languages</div>
+          <ul>{langList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar light-blue">References</div>
+          <p className="cv-note">{fields.references}</p>
+        </>
+      );
+    }
+    if (layout === 'a2') {
+      return (
+        <>
+          <h1>Curriculum Vitae</h1>
+          <div className="cv-bar grey">Personal Information</div>
+          <div className="cv-row"><span>Full Name</span><span>: {fields.name}</span></div>
+          <div className="cv-row"><span>Date of Birth</span><span>: {fields.dob}</span></div>
+          <div className="cv-row"><span>Contact No.</span><span>: {fields.contact}</span></div>
+          <div className="cv-row"><span>Email</span><span>: {fields.email}</span></div>
+          <div className="cv-row"><span>Address</span><span>: {fields.address}</span></div>
+          <div className="cv-bar grey">Education</div>
+          <div className="cv-row"><span>Highest Grade Completed</span><span>: {fields.education}</span></div>
+          <div className="cv-row"><span>School</span><span>: {fields.school}</span></div>
+          <div className="cv-row"><span>Year Completed</span><span>: {fields.year}</span></div>
+          <div className="cv-bar grey">Skills</div>
+          <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar grey">Work Experience (if any)</div>
+          <ul>{expList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar grey">Languages</div>
+          <ul>{langList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar grey">References</div>
+          <p className="cv-note">{fields.references}</p>
+        </>
+      );
+    }
+    if (layout === 'b1') {
+      return (
+        <>
+          <div className="cv-header green"><h1>Curriculum Vitae</h1></div>
+          <div className="cv-bar green">Personal Information</div>
+          <div className="cv-row icon"><span>👤 Full Name</span><span>: {fields.name}</span></div>
+          <div className="cv-row icon"><span>📅 Date of Birth</span><span>: {fields.dob}</span></div>
+          <div className="cv-row icon"><span>📞 Contact No.</span><span>: {fields.contact}</span></div>
+          <div className="cv-row icon"><span>✉ Email</span><span>: {fields.email}</span></div>
+          <div className="cv-row icon"><span>📍 Address</span><span>: {fields.address}</span></div>
+          <div className="cv-bar green">Education</div>
+          <div className="cv-row"><span>Course / Program</span><span>: {fields.course}</span></div>
+          <div className="cv-row"><span>School / University</span><span>: {fields.school}</span></div>
+          <div className="cv-row"><span>Year Level</span><span>: {fields.education}</span></div>
+          <div className="cv-row"><span>Expected Graduation</span><span>: {fields.year}</span></div>
+          <div className="cv-bar green">Skills</div>
+          <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar green">Activities / Involvement</div>
+          <ul>{actList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar green">References</div>
+          <p className="cv-note">{fields.references}</p>
+        </>
+      );
+    }
+    if (layout === 'b2') {
+      return (
+        <>
+          <div className="cv-header blue-wave"><h1>Curriculum Vitae</h1></div>
+          <div className="cv-bar blue">Personal Information</div>
+          <div className="cv-row icon"><span>👤 Full Name</span><span>: {fields.name}</span></div>
+          <div className="cv-row icon"><span>📅 Date of Birth</span><span>: {fields.dob}</span></div>
+          <div className="cv-row icon"><span>📞 Contact No.</span><span>: {fields.contact}</span></div>
+          <div className="cv-row icon"><span>✉ Email</span><span>: {fields.email}</span></div>
+          <div className="cv-row icon"><span>📍 Address</span><span>: {fields.address}</span></div>
+          <div className="cv-bar blue">Education</div>
+          <div className="cv-row"><span>Course / Program</span><span>: {fields.course}</span></div>
+          <div className="cv-row"><span>School / University</span><span>: {fields.school}</span></div>
+          <div className="cv-row"><span>Year Level</span><span>: {fields.education}</span></div>
+          <div className="cv-row"><span>Expected Graduation</span><span>: {fields.year}</span></div>
+          <div className="cv-bar blue">Skills</div>
+          <div className="cv-two-col">
+            <ul>{skillList.slice(0, Math.ceil(skillList.length / 2)).map((s, i) => <li key={i}>{s}</li>)}</ul>
+            <ul>{skillList.slice(Math.ceil(skillList.length / 2)).map((s, i) => <li key={i}>{s}</li>)}</ul>
+          </div>
+          <div className="cv-bar blue">Additional Information</div>
+          <ul>{actList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-bar blue">References</div>
+          <p className="cv-note">{fields.references}</p>
+        </>
+      );
+    }
+    if (layout === 'c1') {
+      return (
+        <>
+          <div className="cv-header dark"><h1>Curriculum Vitae</h1></div>
+          <div className="cv-bar light">Personal Information</div>
+          <div className="cv-row icon"><span>👤 Full Name</span><span>: {fields.name}</span></div>
+          <div className="cv-row icon"><span>📅 Date of Birth</span><span>: {fields.dob}</span></div>
+          <div className="cv-row icon"><span>📞 Contact No.</span><span>: {fields.contact}</span></div>
+          <div className="cv-row icon"><span>✉ Email</span><span>: {fields.email}</span></div>
+          <div className="cv-row icon"><span>📍 Address</span><span>: {fields.address}</span></div>
+          <div className="cv-bar light">Professional Summary</div>
+          <p className="cv-summary">{fields.summary}</p>
+          <div className="cv-bar light">Work Experience</div>
+          <ul className="exp-list">{expList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <div className="cv-two-col">
+            <div>
+              <div className="cv-bar light">Education</div>
+              <div className="cv-row"><span>Degree / Course</span><span>: {fields.course || fields.education}</span></div>
+              <div className="cv-row"><span>School / University</span><span>: {fields.school}</span></div>
+              <div className="cv-row"><span>Year Completed</span><span>: {fields.year}</span></div>
+            </div>
+            <div>
+              <div className="cv-bar light">Skills</div>
+              <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </div>
+          </div>
+        </>
+      );
+    }
+    // c2 default
     return (
-      <div className="cv-sheet a1">
-        <h1>Curriculum Vitae</h1>
-        <div className="cv-bar light-blue">Personal Information</div>
-        <div className="cv-row"><span>Full Name</span><span>: {fields.name}</span></div>
-        <div className="cv-row"><span>Date of Birth</span><span>: {fields.dob}</span></div>
-        <div className="cv-row"><span>Contact No.</span><span>: {fields.contact}</span></div>
-        <div className="cv-row"><span>Email</span><span>: {fields.email}</span></div>
-        <div className="cv-row"><span>Address</span><span>: {fields.address}</span></div>
-
-        <div className="cv-bar light-blue">Education</div>
-        <div className="cv-row"><span>Highest Grade Completed</span><span>: {fields.education}</span></div>
-        <div className="cv-row"><span>School</span><span>: {fields.school}</span></div>
-        <div className="cv-row"><span>Year Completed</span><span>: {fields.year}</span></div>
-
-        <div className="cv-bar light-blue">Skills</div>
-        <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar light-blue">Work Experience (if any)</div>
-        <ul>{expList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar light-blue">Languages</div>
-        <ul>{langList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar light-blue">References</div>
-        <p className="cv-note">{fields.references}</p>
-      </div>
-    );
-  }
-
-  // A2 – Basic (Classic)
-  if (layout === 'a2') {
-    return (
-      <div className="cv-sheet a2">
+      <>
         <h1>Curriculum Vitae</h1>
         <div className="cv-bar grey">Personal Information</div>
         <div className="cv-row"><span>Full Name</span><span>: {fields.name}</span></div>
@@ -102,164 +199,32 @@ function CVPreview({ layout, fields }: { layout?: string; fields: Fields }) {
         <div className="cv-row"><span>Contact No.</span><span>: {fields.contact}</span></div>
         <div className="cv-row"><span>Email</span><span>: {fields.email}</span></div>
         <div className="cv-row"><span>Address</span><span>: {fields.address}</span></div>
-
-        <div className="cv-bar grey">Education</div>
-        <div className="cv-row"><span>Highest Grade Completed</span><span>: {fields.education}</span></div>
-        <div className="cv-row"><span>School</span><span>: {fields.school}</span></div>
-        <div className="cv-row"><span>Year Completed</span><span>: {fields.year}</span></div>
-
-        <div className="cv-bar grey">Skills</div>
-        <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar grey">Work Experience (if any)</div>
-        <ul>{expList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar grey">Languages</div>
-        <ul>{langList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar grey">References</div>
-        <p className="cv-note">{fields.references}</p>
-      </div>
-    );
-  }
-
-  // B1 – Student (Modern)
-  if (layout === 'b1') {
-    return (
-      <div className="cv-sheet b1">
-        <div className="cv-header green">
-          <h1>Curriculum Vitae</h1>
-        </div>
-        <div className="cv-bar green">Personal Information</div>
-        <div className="cv-row icon"><span>👤 Full Name</span><span>: {fields.name}</span></div>
-        <div className="cv-row icon"><span>📅 Date of Birth</span><span>: {fields.dob}</span></div>
-        <div className="cv-row icon"><span>📞 Contact No.</span><span>: {fields.contact}</span></div>
-        <div className="cv-row icon"><span>✉ Email</span><span>: {fields.email}</span></div>
-        <div className="cv-row icon"><span>📍 Address</span><span>: {fields.address}</span></div>
-
-        <div className="cv-bar green">Education</div>
-        <div className="cv-row"><span>Course / Program</span><span>: {fields.course}</span></div>
-        <div className="cv-row"><span>School / University</span><span>: {fields.school}</span></div>
-        <div className="cv-row"><span>Year Level</span><span>: {fields.education}</span></div>
-        <div className="cv-row"><span>Expected Graduation</span><span>: {fields.year}</span></div>
-
-        <div className="cv-bar green">Skills</div>
-        <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar green">Activities / Involvement (Optional)</div>
-        <ul>{actList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar green">References</div>
-        <p className="cv-note">{fields.references}</p>
-      </div>
-    );
-  }
-
-  // B2 – Student (Clean)
-  if (layout === 'b2') {
-    return (
-      <div className="cv-sheet b2">
-        <div className="cv-header blue-wave">
-          <h1>Curriculum Vitae</h1>
-        </div>
-        <div className="cv-bar blue">Personal Information</div>
-        <div className="cv-row icon"><span>👤 Full Name</span><span>: {fields.name}</span></div>
-        <div className="cv-row icon"><span>📅 Date of Birth</span><span>: {fields.dob}</span></div>
-        <div className="cv-row icon"><span>📞 Contact No.</span><span>: {fields.contact}</span></div>
-        <div className="cv-row icon"><span>✉ Email</span><span>: {fields.email}</span></div>
-        <div className="cv-row icon"><span>📍 Address</span><span>: {fields.address}</span></div>
-
-        <div className="cv-bar blue">Education</div>
-        <div className="cv-row"><span>Course / Program</span><span>: {fields.course}</span></div>
-        <div className="cv-row"><span>School / University</span><span>: {fields.school}</span></div>
-        <div className="cv-row"><span>Year Level</span><span>: {fields.education}</span></div>
-        <div className="cv-row"><span>Expected Graduation</span><span>: {fields.year}</span></div>
-
-        <div className="cv-bar blue">Skills</div>
-        <div className="cv-two-col">
-          <ul>{skillList.slice(0, Math.ceil(skillList.length / 2)).map((s, i) => <li key={i}>{s}</li>)}</ul>
-          <ul>{skillList.slice(Math.ceil(skillList.length / 2)).map((s, i) => <li key={i}>{s}</li>)}</ul>
-        </div>
-
-        <div className="cv-bar blue">Additional Information (Optional)</div>
-        <ul>{actList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-        <div className="cv-bar blue">References</div>
-        <p className="cv-note">{fields.references}</p>
-      </div>
-    );
-  }
-
-  // C1 – Professional (Standard)
-  if (layout === 'c1') {
-    return (
-      <div className="cv-sheet c1">
-        <div className="cv-header dark">
-          <h1>Curriculum Vitae</h1>
-        </div>
-        <div className="cv-bar light">Personal Information</div>
-        <div className="cv-row icon"><span>👤 Full Name</span><span>: {fields.name}</span></div>
-        <div className="cv-row icon"><span>📅 Date of Birth</span><span>: {fields.dob}</span></div>
-        <div className="cv-row icon"><span>📞 Contact No.</span><span>: {fields.contact}</span></div>
-        <div className="cv-row icon"><span>✉ Email</span><span>: {fields.email}</span></div>
-        <div className="cv-row icon"><span>📍 Address</span><span>: {fields.address}</span></div>
-
-        <div className="cv-bar light">Professional Summary</div>
-        <p className="cv-summary">{fields.summary}</p>
-
-        <div className="cv-bar light">Work Experience</div>
+        <div className="cv-bar grey">Work Experience</div>
         <ul className="exp-list">{expList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
+        <div className="cv-bar grey">Education</div>
+        <div className="cv-row"><span>Degree / Course</span><span>: {fields.course || fields.education}</span></div>
+        <div className="cv-row"><span>School / University</span><span>: {fields.school}</span></div>
+        <div className="cv-row"><span>Year Completed</span><span>: {fields.year}</span></div>
         <div className="cv-two-col">
           <div>
-            <div className="cv-bar light">Education</div>
-            <div className="cv-row"><span>Degree / Course</span><span>: {fields.course || fields.education}</span></div>
-            <div className="cv-row"><span>School / University</span><span>: {fields.school}</span></div>
-            <div className="cv-row"><span>Year Completed</span><span>: {fields.year}</span></div>
-          </div>
-          <div>
-            <div className="cv-bar light">Skills</div>
+            <div className="cv-bar grey">Skills</div>
             <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
+          <div>
+            <div className="cv-bar grey">Languages</div>
+            <ul>{langList.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          </div>
         </div>
-      </div>
+        <div className="cv-bar grey">References</div>
+        <p className="cv-note">{fields.references}</p>
+      </>
     );
+  })();
+
+  if (mini) {
+    return <div className="cv-mini-preview">{content}</div>;
   }
-
-  // C2 – Professional (Minimal) – default fallback
-  return (
-    <div className="cv-sheet c2">
-      <h1>Curriculum Vitae</h1>
-      <div className="cv-bar grey">Personal Information</div>
-      <div className="cv-row"><span>Full Name</span><span>: {fields.name}</span></div>
-      <div className="cv-row"><span>Date of Birth</span><span>: {fields.dob}</span></div>
-      <div className="cv-row"><span>Contact No.</span><span>: {fields.contact}</span></div>
-      <div className="cv-row"><span>Email</span><span>: {fields.email}</span></div>
-      <div className="cv-row"><span>Address</span><span>: {fields.address}</span></div>
-
-      <div className="cv-bar grey">Work Experience</div>
-      <ul className="exp-list">{expList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-
-      <div className="cv-bar grey">Education</div>
-      <div className="cv-row"><span>Degree / Course</span><span>: {fields.course || fields.education}</span></div>
-      <div className="cv-row"><span>School / University</span><span>: {fields.school}</span></div>
-      <div className="cv-row"><span>Year Completed</span><span>: {fields.year}</span></div>
-
-      <div className="cv-two-col">
-        <div>
-          <div className="cv-bar grey">Skills</div>
-          <ul>{skillList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-        </div>
-        <div>
-          <div className="cv-bar grey">Languages</div>
-          <ul>{langList.map((s, i) => <li key={i}>{s}</li>)}</ul>
-        </div>
-      </div>
-
-      <div className="cv-bar grey">References</div>
-      <p className="cv-note">{fields.references}</p>
-    </div>
-  );
+  return <div className={`cv-sheet ${layout || 'c2'}`}>{content}</div>;
 }
 
 export default function Home() {
@@ -368,8 +333,7 @@ export default function Home() {
                         <button className="tile" key={d.id} onClick={() => open(d)}>
                           {d.category === 'cv' ? (
                             <div className="mini cv cv-card" data-layout={d.layout}>
-                              <strong>{d.name.split('–')[0].trim()}</strong>
-                              <span>{d.name.split('–')[1]?.trim() || d.name}</span>
+                              <CVPreview layout={d.layout} fields={defaults} mini />
                             </div>
                           ) : (
                             <div
@@ -556,7 +520,7 @@ export default function Home() {
                     <input value={fields.year} onChange={(e) => update('year', e.target.value)} />
                   </label>
 
-                  {(chosen.layout === 'c1') && (
+                  {chosen.layout === 'c1' && (
                     <label>
                       Professional Summary
                       <textarea rows={3} value={fields.summary} onChange={(e) => update('summary', e.target.value)} />

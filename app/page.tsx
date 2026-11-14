@@ -402,33 +402,6 @@ export default function Home() {
           </section>
 
           <main className="container" id="catalog">
-            {category === 'all' && (
-              <section className="section" aria-label="Editable cover letters">
-                <div className="heading">
-                  <div><h2>Editable Cover Letters</h2><p>Four professional South African job application letters · edit every paragraph</p></div>
-                  <a href="/cover-letters" style={{color:'inherit',fontWeight:700}}>View all →</a>
-                </div>
-                <div className="gallery featured-gallery">
-                  {([
-                    ['Classic Professional','General Worker','#f7f7f7','#29323b'],
-                    ['Modern Navy','Graduate','#263e58','#ffffff'],
-                    ['Soft Sage','Retail Assistant','#e5eee7','#486957'],
-                    ['Executive Minimal','Operations Manager','#f4f1ed','#292929']
-                  ] as const).map(([title,role,bg,ink]) => (
-                    <a href="/cover-letters" className="tile" key={title} style={{textDecoration:'none',color:'inherit'}}>
-                      <div style={{background:bg,color:ink,minHeight:260,padding:'28px 20px',boxShadow:'inset 0 0 0 1px #ddd',textAlign:'left',fontFamily:'Georgia,serif'}}>
-                        <strong style={{fontSize:19,display:'block',marginBottom:12}}>{title}</strong>
-                        <div style={{height:1,background:'currentColor',opacity:.4,marginBottom:22}}/>
-                        <p style={{fontSize:12,marginBottom:15}}>Dear Hiring Manager,</p>
-                        <p style={{fontSize:12,lineHeight:1.7}}>I am writing to apply for the {role} position. I would welcome the opportunity to contribute my skills and experience to your team.</p>
-                        <p style={{fontSize:12,marginTop:16}}>Yours faithfully,</p>
-                      </div>
-                      <div className="tileinfo"><span>{title}</span><strong>Edit letter →</strong></div>
-                    </a>
-                  ))}
-                </div>
-              </section>
-            )}
             {category !== 'all' && (
               <button className="back" onClick={goHome}>
                 ← Back to homepage
@@ -505,6 +478,33 @@ export default function Home() {
                   </section>
                 );
               })}
+            {category === 'all' && (
+              <section className="section" aria-label="Editable cover letters">
+                <div className="heading">
+                  <div><h2>Editable Cover Letters</h2><p>Four professional South African job application letters · edit every paragraph</p></div>
+                  <a href="/cover-letters" style={{color:'inherit',fontWeight:700}}>View all →</a>
+                </div>
+                <div className="gallery cover-letter-gallery">
+                  {([
+                    ['Classic Professional','General Worker','#f7f7f7','#29323b'],
+                    ['Modern Navy','Graduate','#263e58','#ffffff'],
+                    ['Soft Sage','Retail Assistant','#e5eee7','#486957'],
+                    ['Executive Minimal','Operations Manager','#f4f1ed','#292929']
+                  ] as const).map(([title,role,bg,ink]) => (
+                    <a href="/cover-letters" className="tile" key={title} style={{textDecoration:'none',color:'inherit'}}>
+                      <div style={{background:bg,color:ink,minHeight:260,padding:'28px 20px',boxShadow:'inset 0 0 0 1px #ddd',textAlign:'left',fontFamily:'Georgia,serif'}}>
+                        <strong style={{fontSize:19,display:'block',marginBottom:12}}>{title}</strong>
+                        <div style={{height:1,background:'currentColor',opacity:.4,marginBottom:22}}/>
+                        <p style={{fontSize:12,marginBottom:15}}>Dear Hiring Manager,</p>
+                        <p style={{fontSize:12,lineHeight:1.7}}>I am writing to apply for the {role} position. I would welcome the opportunity to contribute my skills and experience to your team.</p>
+                        <p style={{fontSize:12,marginTop:16}}>Yours faithfully,</p>
+                      </div>
+                      <div className="tileinfo"><span>{title}</span><strong>Edit letter →</strong></div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
           </main>
         </>
       ) : (

@@ -36,7 +36,8 @@ export async function POST(request: Request) {
     const merchantKey = '46f0cd694581a';
     // Public Payfast sandbox credentials, not the merchant's live account.
     const passphrase = 'jt7NOE43FZPn';
-    const baseUrl = new URL(request.url).origin;
+    // Always use the public production hostname: Payfast ITN must never target a transient deployment URL.
+    const baseUrl = 'https://occentra-occentra.vercel.app';
     const fields: Record<string, string> = {
       merchant_id: merchantId,
       merchant_key: merchantKey,

@@ -339,6 +339,7 @@ export default function Home() {
                             <div
                               className={'mini ' + d.category}
                               data-design={d.name}
+                              data-collection={d.collection}
                               style={{ '--accent': d.accent } as React.CSSProperties}
                             >
                               <small>
@@ -424,6 +425,7 @@ export default function Home() {
                     (living && (chosen.category === 'baby' || chosen.category === 'birthday') ? ' immersive' : '')
                   }
                   data-design={chosen.name}
+                  data-collection={chosen.collection}
                   style={{ '--accent': chosen.accent } as React.CSSProperties}
                 >
                   <small>
@@ -454,29 +456,20 @@ export default function Home() {
                     <>
                       <i className="balloon b1" style={{ animationPlayState: motion ? 'running' : 'paused' }} />
                       <i className="balloon b2" style={{ animationPlayState: motion ? 'running' : 'paused' }} />
-                      <i className="light" style={{ animationPlayState: motion ? 'running' : 'paused' }}>
-                        ✦
-                      </i>
-                      {sparkles &&
-                        Array.from({ length: 10 }, (_, i) => (
-                          <i
-                            className="sparkle"
-                            key={i}
-                            style={{ left: (i * 19 + 5) % 95 + '%', animationDelay: i * 0.45 + 's' }}
-                          >
-                            ✦
-                          </i>
-                        ))}
+                      {sparkles && (
+                        <>
+                          <i className="sparkle" style={{ left: '20%', animationDelay: '0s' }}>✦</i>
+                          <i className="sparkle" style={{ left: '50%', animationDelay: '1.5s' }}>✧</i>
+                          <i className="sparkle" style={{ left: '75%', animationDelay: '3s' }}>✦</i>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
               )}
-              <p className="hint">This is an editable preview. Finished paid downloads are not yet available.</p>
             </div>
 
             <div className="editor">
-              <h2>Edit your {chosen.category === 'cv' ? 'CV' : 'invitation'}</h2>
-
               {chosen.category === 'cv' ? (
                 <>
                   <label>
@@ -488,7 +481,7 @@ export default function Home() {
                     <input value={fields.dob} onChange={(e) => update('dob', e.target.value)} />
                   </label>
                   <label>
-                    Contact Number
+                    Contact No.
                     <input value={fields.contact} onChange={(e) => update('contact', e.target.value)} />
                   </label>
                   <label>
@@ -499,16 +492,8 @@ export default function Home() {
                     Address
                     <input value={fields.address} onChange={(e) => update('address', e.target.value)} />
                   </label>
-
-                  {(chosen.layout === 'b1' || chosen.layout === 'b2' || chosen.layout === 'c1' || chosen.layout === 'c2') && (
-                    <label>
-                      Course / Program / Degree
-                      <input value={fields.course} onChange={(e) => update('course', e.target.value)} />
-                    </label>
-                  )}
-
                   <label>
-                    {chosen.layout?.startsWith('b') ? 'Year Level / Education' : 'Highest Grade / Qualification'}
+                    Highest Grade / Education
                     <input value={fields.education} onChange={(e) => update('education', e.target.value)} />
                   </label>
                   <label>
@@ -516,44 +501,33 @@ export default function Home() {
                     <input value={fields.school} onChange={(e) => update('school', e.target.value)} />
                   </label>
                   <label>
-                    Year Completed / Expected Graduation
+                    Year
                     <input value={fields.year} onChange={(e) => update('year', e.target.value)} />
                   </label>
-
-                  {chosen.layout === 'c1' && (
-                    <label>
-                      Professional Summary
-                      <textarea rows={3} value={fields.summary} onChange={(e) => update('summary', e.target.value)} />
-                    </label>
-                  )}
-
+                  <label>
+                    Course / Program
+                    <input value={fields.course} onChange={(e) => update('course', e.target.value)} />
+                  </label>
                   <label>
                     Skills (one per line)
                     <textarea rows={4} value={fields.skills} onChange={(e) => update('skills', e.target.value)} />
                   </label>
-
                   <label>
                     Work Experience (one per line)
-                    <textarea rows={4} value={fields.experience} onChange={(e) => update('experience', e.target.value)} />
+                    <textarea rows={3} value={fields.experience} onChange={(e) => update('experience', e.target.value)} />
                   </label>
-
-                  {(chosen.layout === 'b1' || chosen.layout === 'b2') && (
-                    <label>
-                      Activities / Additional Info (one per line)
-                      <textarea rows={3} value={fields.activities} onChange={(e) => update('activities', e.target.value)} />
-                    </label>
-                  )}
-
+                  <label>
+                    Activities / Involvement (one per line)
+                    <textarea rows={2} value={fields.activities} onChange={(e) => update('activities', e.target.value)} />
+                  </label>
                   <label>
                     Languages (one per line)
                     <textarea rows={2} value={fields.languages} onChange={(e) => update('languages', e.target.value)} />
                   </label>
-
                   <label>
                     References
                     <input value={fields.references} onChange={(e) => update('references', e.target.value)} />
                   </label>
-
                   <button className="goldbtn" onClick={() => window.print()}>
                     Print / Save CV as PDF
                   </button>
@@ -600,17 +574,12 @@ export default function Home() {
                   {notice}
                 </p>
               )}
-              <p className="hint">No payments are processed in this preview.</p>
             </div>
           </div>
         </main>
       )}
 
-      <footer>
-        <strong>OCCENTRA</strong>
-        <p>Beautifully personalized. Effortlessly shared.</p>
-        <small>© 2026 Occentra · Secure checkout coming soon</small>
-      </footer>
+      <footer>OCCENTRA · Design · Personalize · Celebrate</footer>
     </>
   );
 }

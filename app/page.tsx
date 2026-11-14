@@ -52,6 +52,31 @@ const defaults: Fields = {
   phone: '071 000 0000',
 };
 
+const birthdayArt: Record<string, { emoji: string; scene: string; sky: string; ink: string }> = {
+  Space: { emoji: '🚀 🪐', scene: '✦ ✧ ★ ✦', sky: '#14264f', ink: '#fff6d9' },
+  Firefighter: { emoji: '🚒 👨‍🚒', scene: '✦ 🚨 ✦', sky: '#ffe4c9', ink: '#8d301b' },
+  Robot: { emoji: '🤖 ⚙️', scene: '✧ ⚡ ✧', sky: '#d7f3f6', ink: '#1a5570' },
+  Sports: { emoji: '⚽ 🏀', scene: '★ ★ ★', sky: '#f0f6db', ink: '#315c40' },
+  'Racing Cars': { emoji: '🏎️ 🏁', scene: '✦ ▰ ✦', sky: '#242e3b', ink: '#fff3d2' },
+  Dinosaur: { emoji: '🦖 🌿', scene: '✦ 🌴 ✦', sky: '#e8edc7', ink: '#395a33' },
+  Construction: { emoji: '🚜 🚧', scene: '✦ ⚒ ✦', sky: '#fff0c9', ink: '#75501e' },
+  Pirate: { emoji: '🏴‍☠️ ⛵', scene: '✦ ⚓ ✦', sky: '#e0eff3', ink: '#26465d' },
+  Superhero: { emoji: '🦸 ⭐', scene: '✦ ⚡ ✦', sky: '#172a5a', ink: '#fff4c9' },
+  Underwater: { emoji: '🐢 🐠', scene: '✧ 🪸 ✧', sky: '#d3f1f2', ink: '#166779' },
+  Safari: { emoji: '🦁 🦒', scene: '✦ 🌿 ✦', sky: '#f5edc7', ink: '#77502b' },
+  Camping: { emoji: '⛺ 🌲', scene: '✦ 🌙 ✦', sky: '#203b52', ink: '#fff1cc' },
+};
+function BirthdayArtwork({ name, compact = false }: { name: string; compact?: boolean }) {
+  const art = birthdayArt[name] || birthdayArt.Space;
+  return <div className={'birthday-art ' + (compact ? 'birthday-art-small' : '')} style={{ background: art.sky, color: art.ink }}>
+    <div className="birthday-art-stars">{art.scene}</div>
+    <div className="birthday-art-icons" aria-hidden="true">{art.emoji}</div>
+    <div className="birthday-art-caption">YOU’RE INVITED TO A</div>
+    <div className="birthday-art-heading">Birthday Party!</div>
+    <div className="birthday-art-footer">{name.toUpperCase()} ADVENTURE</div>
+  </div>;
+}
+
 function CVPreview({ layout, fields, mini = false }: { layout?: string; fields: Fields; mini?: boolean }) {
   const skillList = fields.skills.split('\n').filter(Boolean);
   const expList = fields.experience.split('\n').filter(Boolean);
@@ -426,7 +451,9 @@ export default function Home() {
                     <div className={category === 'all' ? 'gallery featured-gallery' : 'gallery'}>
                       {(category === 'all' ? entries.slice(0, 3) : entries).map((d) => (
                         <button className="tile" key={d.id} onClick={() => open(d)}>
-                          {d.category === 'cv' ? (
+                          {d.category === 'birthday' ? (
+                            <BirthdayArtwork name={d.name} compact />
+                          ) : d.category === 'cv' ? (
                             <div className="mini cv cv-card" data-layout={d.layout}>
                               <CVPreview layout={d.layout} fields={defaults} mini />
                             </div>
@@ -498,7 +525,7 @@ export default function Home() {
             <strong>R{price(chosen.category, living)}</strong>
           </div>
 
-          {(chosen.category === 'baby' || chosen.category === 'birthday') && (
+          {chosen.category === 'baby' && (
             <div className="mode">
               <button disabled={guestLocked} className={!living ? 'active' : ''} onClick={() => setLiving(false)}>
                 Stationary · R49
@@ -513,6 +540,16 @@ export default function Home() {
             <div>
               {chosen.category === 'cv' ? (
                 <CVPreview layout={chosen.layout} fields={fields} />
+              ) : chosen.category === 'birthday' ? (
+                <div className="birthday-finished">
+                  <BirthdayArtwork name={chosen.name} />
+                  <div className="birthday-finished-copy">
+                    <p>{fields.subtitle}</p><h2>{fields.name}</h2>
+                    {fields.message && <p>{fields.message}</p>}
+                    <div className="details">{(['date','time','venue','address'] as const).map(k => fields[k] && <span key={k}>{fields[k]}</span>)}</div>
+                    {fields.rsvp && <p>{fields.rsvp}</p>}
+                  </div>
+                </div>
               ) : (
                 <div
                   className={
@@ -662,10 +699,10 @@ export default function Home() {
               {guestLocked && chosen.category === 'cv' && <button type="button" className="goldbtn" onClick={() => window.print()}>Download CV as PDF</button>}
               <button
                 className="goldbtn"
-                onClick={chosen.category === 'cv' ? startSandboxCheckout : () => setNotice('Checkout is not available for this category.')}
+                onClick={chosen.category === 'cv' ? startSandboxCheckout : () => setNotice('Birthday payment and download will be enabled after testing. You can preview and edit this finished design now.')}
                 disabled={checkingOut || guestLocked}
               >
-                {checkingOut ? 'Opening Payfast Sandbox…' : 'Pay R20 · Payfast Sandbox'}
+                {checkingOut ? 'Opening Payfast Sandbox…' : chosen.category === 'cv' ? 'Pay R20 · Payfast Sandbox' : 'Checkout coming soon'}
               </button>
               {guestLocked && <p>Payment verified. Download your CV as many times as you need while this page is open.</p>}
               {notice && (

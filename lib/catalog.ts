@@ -3,6 +3,7 @@ export type Design = { id: string; category: Category; name: string; accent: str
 
 export const groups: [Category, string, string][] = [
   ['cv', 'Editable CVs', 'All templates R20'],
+  ['birthday', 'Birthday Invitations', '12 illustrated children’s designs · R49 each'],
 ];
 
 const names: Record<Category, string[]> = {
@@ -80,7 +81,7 @@ function getWeddingCollection(name: string): string {
 }
 
 export const designs: Design[] = groups.flatMap(([category]) =>
-  names[category].map((name, i) => ({
+  (category === 'birthday' ? names[category].slice(0, 12) : names[category]).map((name, i) => ({
     id: category + '-' + i,
     category,
     name,

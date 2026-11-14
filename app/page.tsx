@@ -305,14 +305,14 @@ export default function Home() {
   }
 
   async function startSandboxCheckout() {
-    if (!selected || selected.category !== 'cv') return;
+    if (!selected || selected.category !== 'cv' || !guestToken || guestLocked) { setNotice('Save your CV before starting checkout.'); return; }
     setCheckingOut(true);
     setNotice('');
     try {
       const response = await fetch('/api/payfast/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designId: selected.id }),
+        body: JSON.stringify({ designId: selected.id, token: guestToken }),
       });
       if (!response.ok) throw new Error('Unable to start Payfast checkout');
       const { url, fields: paymentFields } = await response.json();
@@ -637,9 +637,7 @@ export default function Home() {
                     References
                     <input value={fields.references} onChange={(e) => update('references', e.target.value)} />
                   </label>
-                  <button className="goldbtn" onClick={() => window.print()}>
-                    Print / Save CV as PDF
-                  </button>
+                  {guestLocked ? <button type="button" className="goldbtn" onClick={() => window.print()}>Print / Save CV as PDF</button> : <p>PDF download unlocks after verified payment. Save your CV first.</p>}
                 </>
               ) : (
                 <>
@@ -676,10 +674,11 @@ export default function Home() {
               <button
                 className="goldbtn"
                 onClick={chosen.category === 'cv' ? startSandboxCheckout : () => setNotice('Checkout is not available for this category.')}
-                disabled={checkingOut || guestLocked}
+                disabled={checkingOut || guestLocked || !guestToken}
               >
                 {checkingOut ? 'Opening Payfast Sandbox…' : 'Test Pay R20 · Payfast Sandbox'}
               </button>
+              {guestLocked && <p>Payment verified. Your CV is locked and can be printed or saved as PDF until the private link expires.</p>}
               {notice && (
                 <p className="notice" role="status">
                   {notice}

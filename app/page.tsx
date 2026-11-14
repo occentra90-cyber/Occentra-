@@ -293,7 +293,7 @@ export default function Home() {
     return () => { active = false; };
   }, []);
 
-  async function startSandboxCheckout() {
+  async function startPayfastCheckout() {
     if (!selected || selected.category !== 'cv' || guestLocked) return;
     setCheckingOut(true);
     setNotice('');
@@ -322,7 +322,7 @@ export default function Home() {
       document.body.appendChild(form);
       form.submit();
     } catch {
-      setNotice('Sandbox checkout could not start. Please try again.');
+      setNotice('Payfast checkout could not start. Please try again.');
       setCheckingOut(false);
     }
   }
@@ -697,10 +697,10 @@ export default function Home() {
               {guestLocked && chosen.category === 'cv' && <button type="button" className="goldbtn" onClick={() => window.print()}>Download CV as PDF</button>}
               <button
                 className="goldbtn"
-                onClick={chosen.category === 'cv' ? startSandboxCheckout : () => setNotice('Checkout is not available for this category.')}
+                onClick={chosen.category === 'cv' ? startPayfastCheckout : () => setNotice('Checkout is not available for this category.')}
                 disabled={checkingOut || guestLocked}
               >
-                {checkingOut ? 'Opening Payfast Sandbox…' : 'Pay R20 · Payfast Sandbox'}
+                {checkingOut ? 'Opening Payfast…' : 'Pay R20 · Payfast'}
               </button>
               {guestLocked && <p>Payment verified. Download your CV as many times as you need while this page is open.</p>}
               {notice && (

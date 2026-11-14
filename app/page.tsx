@@ -262,7 +262,7 @@ export default function Home() {
         setGuestToken(token);
         setGuestExpiry(design.expires_at);
         setGuestLocked(design.status === 'paid');
-        setNotice(design.status === 'paid' ? 'Payment verified. Download your CV below as many times as you need.' : 'Payment was not completed. You can continue editing and pay when ready.');
+        setNotice(design.status === 'paid' ? 'Payment verified. Download your CV below as many times as you need.' : (new URLSearchParams(window.location.search).get('payment') === 'returned' ? 'Checking your payment confirmation. Please do not pay again.' : 'Your CV is ready to edit. Payment has not been verified.'));
       })
       .catch(error => setNotice(error instanceof Error ? error.message : 'Unable to open private link'));
   }, []);

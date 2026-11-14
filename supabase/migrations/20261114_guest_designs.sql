@@ -15,8 +15,8 @@ create table if not exists public.guest_designs (
  updated_at timestamptz not null default now(),
  expires_at timestamptz not null default (now() + interval '30 days'),
  warning_7d_sent_at timestamptz,
- warning_1d_sent_at timestamptz,
- constraint guest_design_expiry_fixed check (expires_at = created_at + interval '30 days')
+ warning_1d_sent_at timestamptz
+
 );
 create index if not exists guest_designs_expiry_idx on public.guest_designs(expires_at);
 alter table public.guest_designs enable row level security;
@@ -29,6 +29,9 @@ revoke all on public.guest_designs from anon, authenticated;
 create or replace function public.occentra_guard_guest_design()
 returns trigger language plpgsql set search_path = public as $$
 begin
+ if tg_op = 'INSERT' then
+   new.expires_at := new.created_at + interval '30 days';
+ end if;
  if tg_op = 'UPDATE' then
    if old.status = 'paid' and (
      new.fields is distinct from old.fields or

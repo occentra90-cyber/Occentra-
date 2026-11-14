@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { designs, groups, price, type Design, type Category } from '../lib/catalog';
 
 type Fields = {
@@ -237,6 +237,72 @@ export default function Home() {
   const [notice, setNotice] = useState('');
 
   const [checkingOut, setCheckingOut] = useState(false);
+  const [guestToken, setGuestToken] = useState('');
+  const [guestExpiry, setGuestExpiry] = useState('');
+  const [guestLocked, setGuestLocked] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('design');
+    if (!token) return;
+    fetch('/api/guest/design?token=' + encodeURIComponent(token), { cache: 'no-store' })
+      .then(async response => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Private link unavailable');
+        return result.design;
+      })
+      .then(design => {
+        const entry = designs.find(d => d.id === design.template_id);
+        if (!entry) throw new Error('Template unavailable');
+        setSelected(entry);
+        setFields({ ...defaults, ...design.fields });
+        setLiving(Boolean(design.settings?.living));
+        setMotion(design.settings?.motion !== false);
+        setSparkles(design.settings?.sparkles !== false);
+        setGuestToken(token);
+        setGuestExpiry(design.expires_at);
+        setGuestLocked(design.status === 'paid');
+        setNotice(design.status === 'paid' ? 'This purchased design is locked.' : 'Your saved design is ready to edit.');
+      })
+      .catch(error => setNotice(error instanceof Error ? error.message : 'Unable to open private link'));
+  }, []);
+
+  async function saveGuestDesign() {
+    if (!selected || guestLocked) return;
+    setSaving(true);
+    setNotice('');
+    try {
+      const settings = { living, motion, sparkles };
+      const response = await fetch('/api/guest/design', {
+        method: guestToken ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(guestToken
+          ? { token: guestToken, fields, settings }
+          : { templateId: selected.id, fields, settings }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not save');
+      if (result.token) {
+        setGuestToken(result.token);
+        setGuestExpiry(result.expiresAt);
+        window.history.replaceState({}, '', '/?design=' + result.token);
+      }
+      setNotice('Saved! Copy your private link to return later. Keep it private.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not save');
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function copyGuestLink() {
+    const link = window.location.origin + '/?design=' + guestToken;
+    try {
+      await navigator.clipboard.writeText(link);
+      setNotice('Private link copied. Anyone with this link can access your design.');
+    } catch {
+      setNotice('Your private link: ' + link);
+    }
+  }
 
   async function startSandboxCheckout() {
     if (!selected || selected.category !== 'cv') return;
@@ -272,6 +338,10 @@ export default function Home() {
 
   function open(d: Design) {
     setSelected(d);
+    setGuestToken('');
+    setGuestExpiry('');
+    setGuestLocked(false);
+    window.history.replaceState({}, '', '/');
     setLiving(false);
     setFields({
       ...defaults,
@@ -430,16 +500,17 @@ export default function Home() {
 
           <div className="editorheading">
             <h1>{chosen.name}</h1>
-            <p>Personalize your design. Changes update immediately.</p>
+            <p>{guestLocked ? 'Purchased design · editing locked' : 'Personalize your design. Changes update immediately.'}</p>
+            {guestExpiry && <p>Private access expires {new Date(guestExpiry).toLocaleDateString('en-ZA')}. Download your design before this date.</p>}
             <strong>R{price(chosen.category, living)}</strong>
           </div>
 
           {(chosen.category === 'baby' || chosen.category === 'birthday') && (
             <div className="mode">
-              <button className={!living ? 'active' : ''} onClick={() => setLiving(false)}>
+              <button disabled={guestLocked} className={!living ? 'active' : ''} onClick={() => setLiving(false)}>
                 Stationary · R49
               </button>
-              <button className={living ? 'active' : ''} onClick={() => setLiving(true)}>
+              <button disabled={guestLocked} className={living ? 'active' : ''} onClick={() => setLiving(true)}>
                 {chosen.category === 'birthday' ? 'Animated · R99' : 'Living 3D · R99'}
               </button>
             </div>
@@ -502,6 +573,12 @@ export default function Home() {
             </div>
 
             <div className="editor">
+              <div style={{ marginBottom: 16 }}>
+                {!guestLocked && <button className="goldbtn" disabled={saving} onClick={saveGuestDesign}>{saving ? 'Saving…' : guestToken ? 'Save Changes' : 'Save Design for Later'}</button>}
+                {guestToken && <button type="button" onClick={copyGuestLink} style={{ marginTop: 10, display: 'block' }}>Copy Private Return Link</button>}
+                {guestExpiry && Date.parse(guestExpiry) - Date.now() <= 7 * 86400000 && <p className="notice">Reminder: Your design expires soon. Download it before the access period ends.</p>}
+              </div>
+              <fieldset disabled={guestLocked} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
               {chosen.category === 'cv' ? (
                 <>
                   <label>
@@ -595,10 +672,11 @@ export default function Home() {
                 </>
               )}
 
+              </fieldset>
               <button
                 className="goldbtn"
                 onClick={chosen.category === 'cv' ? startSandboxCheckout : () => setNotice('Checkout is not available for this category.')}
-                disabled={checkingOut}
+                disabled={checkingOut || guestLocked}
               >
                 {checkingOut ? 'Opening Payfast Sandbox…' : 'Test Pay R20 · Payfast Sandbox'}
               </button>

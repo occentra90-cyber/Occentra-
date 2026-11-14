@@ -10,8 +10,8 @@ export async function POST(req: Request) {
     if (body.length > 20000) { console.warn('payfast_itn_rejected', { reason: 'payload_too_large' }); return new NextResponse('Too large',{status:413}); }
     const data = new URLSearchParams(body);
     const signature = data.get('signature') || '';
-    console.info('payfast_itn_shape', { contentType: req.headers.get('content-type')?.split(';')[0] || 'missing', fieldCount: [...data.keys()].length, fieldNames: [...data.keys()].slice(0,35), hasMerchantId: data.has('merchant_id'), hasSignature: data.has('signature'), signatureLength: signature.length, signatureHex: /^[a-f0-9]{32}$/i.test(signature), merchantIdLength: (data.get('merchant_id') || '').length, merchantIdMatches: data.get('merchant_id') === process.env.PAYFAST_SANDBOX_MERCHANT_ID });
-    if (!process.env.PAYFAST_SANDBOX_MERCHANT_ID || data.get('merchant_id') !== process.env.PAYFAST_SANDBOX_MERCHANT_ID || !/^[a-f0-9]{32}$/i.test(signature)) { console.warn('payfast_itn_rejected', { reason: 'merchant_or_signature_format', merchantConfigured: Boolean(process.env.PAYFAST_SANDBOX_MERCHANT_ID), merchantMatches: data.get('merchant_id') === process.env.PAYFAST_SANDBOX_MERCHANT_ID, signatureLengthValid: signature.length === 32, signatureHexValid: /^[a-f0-9]{32}$/i.test(signature) }); return new NextResponse('Invalid notification',{status:400}); }
+    console.info('payfast_itn_shape', { contentType: req.headers.get('content-type')?.split(';')[0] || 'missing', fieldCount: [...data.keys()].length, fieldNames: [...data.keys()].slice(0,35), hasMerchantId: data.has('merchant_id'), hasSignature: data.has('signature'), signatureLength: signature.length, signatureHex: /^[a-f0-9]{32}$/i.test(signature), merchantIdLength: (data.get('merchant_id') || '').length, merchantIdMatches: data.get('merchant_id') === process.env.PAYFAST_MERCHANT_ID });
+    if (!process.env.PAYFAST_MERCHANT_ID || data.get('merchant_id') !== process.env.PAYFAST_MERCHANT_ID || !/^[a-f0-9]{32}$/i.test(signature)) { console.warn('payfast_itn_rejected', { reason: 'merchant_or_signature_format', merchantConfigured: Boolean(process.env.PAYFAST_MERCHANT_ID), merchantMatches: data.get('merchant_id') === process.env.PAYFAST_MERCHANT_ID, signatureLengthValid: signature.length === 32, signatureHexValid: /^[a-f0-9]{32}$/i.test(signature) }); return new NextResponse('Invalid notification',{status:400}); }
     // Payfast ITN includes empty fields in the signed string, in posted order, stopping at signature.
     // Unlike checkout generation, ITN validation must not trim received field values.
     const fields: string[] = [];
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       fields.push(key + '=' + encodeURIComponent(value).replace(/%20/g, '+').replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase()));
     }
     const params = fields.join('&');
-    const passphrase = process.env.PAYFAST_SANDBOX_PASSPHRASE || '';
+    const passphrase = process.env.PAYFAST_PASSPHRASE || '';
     const expected = createHash('md5').update(params + (passphrase ? '&passphrase=' + encode(passphrase) : '')).digest('hex');
     if (!timingSafeEqual(Buffer.from(expected),Buffer.from(signature.toLowerCase()))) { console.warn('payfast_itn_rejected', { reason: 'signature_mismatch' }); return new NextResponse('Invalid signature',{status:400}); }
     if (data.get('payment_status') !== 'COMPLETE') { console.warn('payfast_itn_rejected', { reason: 'payment_not_complete' }); return new NextResponse('Payment not complete',{status:400}); }
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const expectedCents = cover ? 1500 : 2000;
     const templateId = itemName.replace(cover ? 'Occentra Cover Letter ' : 'Occentra CV Template ', '');
     if (!(cover || cv) || Math.round(Number(data.get('amount_gross')) * 100) !== expectedCents || !/^[a-f0-9-]{36}$/i.test(data.get('m_payment_id')||'')) { console.warn('payfast_itn_rejected', { reason: 'order_details' }); return new NextResponse('Invalid order',{status:400}); }
-    const validation = await fetch('https://sandbox.payfast.co.za/eng/query/validate',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:params,cache:'no-store',signal:AbortSignal.timeout(10000)});
+    const validation = await fetch('https://www.payfast.co.za/eng/query/validate',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:params,cache:'no-store',signal:AbortSignal.timeout(10000)});
     if (!validation.ok || (await validation.text()).trim()!=='VALID') { console.warn('payfast_itn_rejected', { reason: 'remote_validation', status: validation.status }); return new NextResponse('Invalid payment',{status:400}); }
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;

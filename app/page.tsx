@@ -490,8 +490,8 @@ export default function Home() {
                     ['Modern Navy','Graduate','#263e58','#ffffff'],
                     ['Soft Sage','Retail Assistant','#e5eee7','#486957'],
                     ['Executive Minimal','Operations Manager','#f4f1ed','#292929']
-                  ] as const).map(([title,role,bg,ink]) => (
-                    <a href="/cover-letters" className="tile" key={title} style={{textDecoration:'none',color:'inherit'}}>
+                  ] as const).slice(0,3).map(([title,role,bg,ink]) => (
+                    <a href={"/cover-letters?template=" + (title === "Classic Professional" ? "classic" : title === "Modern Navy" ? "navy" : title === "Soft Sage" ? "sage" : "executive")} className="tile" key={title} style={{textDecoration:'none',color:'inherit'}}>
                       <div className="cover-letter-mini" style={{background:bg,color:ink}}>
                         <div className="cover-letter-mini-page">
                           <h3>{title}</h3>

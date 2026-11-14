@@ -267,6 +267,32 @@ export default function Home() {
       .catch(error => setNotice(error instanceof Error ? error.message : 'Unable to open private link'));
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('design');
+    if (!token || params.get('payment') !== 'returned') return;
+    let active = true;
+    let attempts = 0;
+    setNotice('Checking your payment confirmation. Please wait; do not pay again.');
+    const check = async () => {
+      if (!active) return;
+      try {
+        const response = await fetch('/api/payfast/status?token=' + encodeURIComponent(token), { cache: 'no-store' });
+        const result = await response.json();
+        if (result.paid) {
+          setGuestLocked(true);
+          setNotice('Payment verified! You can download your CV as many times as needed.');
+          return;
+        }
+      } catch { /* retry temporary network errors */ }
+      attempts++;
+      if (active && attempts < 15) window.setTimeout(check, 2000);
+      else if (active) setNotice('Payment confirmation is still pending. Do not pay again. Please contact Occentra support if this continues.');
+    };
+    void check();
+    return () => { active = false; };
+  }, []);
+
   async function startSandboxCheckout() {
     if (!selected || selected.category !== 'cv' || guestLocked) return;
     setCheckingOut(true);

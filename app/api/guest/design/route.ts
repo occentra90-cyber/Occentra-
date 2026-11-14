@@ -36,7 +36,8 @@ export async function POST(request: Request) {
   try {
     await purgeExpired();
     const body = await request.json();
-    const design = designs.find(d => d.id === body?.templateId);
+    const cover = typeof body?.templateId === 'string' && /^cover-(classic|navy|sage|executive)$/.test(body.templateId);
+    const design = cover ? { id: body.templateId, category: 'cover', name: 'Cover Letter' } : designs.find(d => d.id === body?.templateId);
     if (!design || !validFields(body?.fields) || !validSettings(body?.settings)) return fail('Invalid design', 400);
     const token = randomBytes(32).toString('hex');
     const { data, error } = await db().from('guest_designs').insert({

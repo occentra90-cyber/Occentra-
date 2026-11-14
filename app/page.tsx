@@ -262,57 +262,24 @@ export default function Home() {
         setGuestToken(token);
         setGuestExpiry(design.expires_at);
         setGuestLocked(design.status === 'paid');
-        setNotice(design.status === 'paid' ? 'This purchased design is locked.' : 'Your saved design is ready to edit.');
+        setNotice(design.status === 'paid' ? 'Payment verified. Download your CV below as many times as you need.' : 'Payment was not completed. You can continue editing and pay when ready.');
       })
       .catch(error => setNotice(error instanceof Error ? error.message : 'Unable to open private link'));
   }, []);
 
-  async function saveGuestDesign() {
-    if (!selected || guestLocked) return;
-    setSaving(true);
-    setNotice('');
-    try {
-      const settings = { living, motion, sparkles };
-      const response = await fetch('/api/guest/design', {
-        method: guestToken ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(guestToken
-          ? { token: guestToken, fields, settings }
-          : { templateId: selected.id, fields, settings }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Could not save');
-      if (result.token) {
-        setGuestToken(result.token);
-        setGuestExpiry(result.expiresAt);
-        window.history.replaceState({}, '', '/?design=' + result.token);
-      }
-      setNotice('Saved! Copy your private link to return later. Keep it private.');
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not save');
-    } finally {
-      setSaving(false);
-    }
-  }
-  async function copyGuestLink() {
-    const link = window.location.origin + '/?design=' + guestToken;
-    try {
-      await navigator.clipboard.writeText(link);
-      setNotice('Private link copied. Anyone with this link can access your design.');
-    } catch {
-      setNotice('Your private link: ' + link);
-    }
-  }
-
   async function startSandboxCheckout() {
-    if (!selected || selected.category !== 'cv' || !guestToken || guestLocked) { setNotice('Save your CV before starting checkout.'); return; }
+    if (!selected || selected.category !== 'cv' || guestLocked) return;
     setCheckingOut(true);
     setNotice('');
     try {
+      const savedResponse = await fetch('/api/guest/design', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templateId: selected.id, fields, settings: { living, motion, sparkles } }) });
+      const saved = await savedResponse.json();
+      if (!savedResponse.ok || !saved.token) throw new Error('Could not prepare your design');
+      setGuestToken(saved.token);
       const response = await fetch('/api/payfast/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designId: selected.id, token: guestToken }),
+        body: JSON.stringify({ designId: selected.id, token: saved.token }),
       });
       if (!response.ok) throw new Error('Unable to start Payfast checkout');
       const { url, fields: paymentFields } = await response.json();
@@ -398,7 +365,7 @@ export default function Home() {
               <br />
               <em>Made for you.</em>
             </h1>
-            <p>Choose a professional CV template, personalize your details, and save or print your CV. All templates R20.</p>
+            <p>Choose a CV, edit your details, pay R20 and download your finished CV.</p>
             <button
               className="goldbtn"
               onClick={() => document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' })}
@@ -573,11 +540,6 @@ export default function Home() {
             </div>
 
             <div className="editor">
-              <div style={{ marginBottom: 16 }}>
-                {!guestLocked && <button className="goldbtn" disabled={saving} onClick={saveGuestDesign}>{saving ? 'Saving…' : guestToken ? 'Save Changes' : 'Save Design for Later'}</button>}
-                {guestToken && <button type="button" onClick={copyGuestLink} style={{ marginTop: 10, display: 'block' }}>Copy Private Return Link</button>}
-                {guestExpiry && Date.parse(guestExpiry) - Date.now() <= 7 * 86400000 && <p className="notice">Reminder: Your design expires soon. Download it before the access period ends.</p>}
-              </div>
               <fieldset disabled={guestLocked} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
               {chosen.category === 'cv' ? (
                 <>
@@ -637,7 +599,7 @@ export default function Home() {
                     References
                     <input value={fields.references} onChange={(e) => update('references', e.target.value)} />
                   </label>
-                  {!guestLocked && <p>PDF download unlocks after verified payment. Save your CV first.</p>}
+                  {!guestLocked && <p>When your CV is ready, tap Pay R20. Your design is prepared automatically.</p>}
                 </>
               ) : (
                 <>
@@ -671,15 +633,15 @@ export default function Home() {
               )}
 
               </fieldset>
-              {guestLocked && chosen.category === 'cv' && <button type="button" className="goldbtn" onClick={() => window.print()}>Print / Save CV as PDF</button>}
+              {guestLocked && chosen.category === 'cv' && <button type="button" className="goldbtn" onClick={() => window.print()}>Download CV as PDF</button>}
               <button
                 className="goldbtn"
                 onClick={chosen.category === 'cv' ? startSandboxCheckout : () => setNotice('Checkout is not available for this category.')}
-                disabled={checkingOut || guestLocked || !guestToken}
+                disabled={checkingOut || guestLocked}
               >
-                {checkingOut ? 'Opening Payfast Sandbox…' : 'Test Pay R20 · Payfast Sandbox'}
+                {checkingOut ? 'Opening Payfast Sandbox…' : 'Pay R20 · Payfast Sandbox'}
               </button>
-              {guestLocked && <p>Payment verified. Your CV is locked and can be printed or saved as PDF until the private link expires.</p>}
+              {guestLocked && <p>Payment verified. Download your CV as many times as you need while this page is open.</p>}
               {notice && (
                 <p className="notice" role="status">
                   {notice}

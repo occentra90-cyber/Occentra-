@@ -481,7 +481,7 @@ export default function Home() {
             {category === 'all' && (
               <section className="section" aria-label="Editable cover letters">
                 <div className="heading">
-                  <div><h2>Editable Cover Letters</h2><p>Four professional South African job application letters · edit every paragraph</p></div>
+                  <div><h2>Editable Cover Letters</h2><p>Four professional South African job application letters · R15 each · edit every paragraph</p></div>
                   <a href="/cover-letters" style={{color:'inherit',fontWeight:700}}>View all →</a>
                 </div>
                 <div className="gallery cover-letter-gallery">
@@ -506,7 +506,7 @@ export default function Home() {
                           <p>Yours faithfully,</p>
                         </div>
                       </div>
-                      <div className="tileinfo"><span>{title}</span><strong>Edit letter →</strong></div>
+                      <div className="tileinfo"><span>{title}</span><strong>R15 · Edit →</strong></div>
                     </a>
                   ))}
                 </div>

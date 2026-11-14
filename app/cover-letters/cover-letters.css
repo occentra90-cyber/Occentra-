@@ -13,3 +13,9 @@
 .letters-site .letter-paper .letter-identity h2{font-size:23px}
 .letters-site .letter-paper .letter-identity div{overflow-wrap:anywhere}
 }
+
+.letters-fields{border:0;padding:0;margin:0;min-width:0}
+.letters-payment{border-top:1px solid #e5e0d8;margin-top:24px;padding-top:20px}
+.letters-payment button{display:block;width:100%;background:#a7814f;color:#fff;border:0;border-radius:6px;padding:15px;font-weight:700;cursor:pointer}
+.letters-payment button:disabled{opacity:.65;cursor:wait}
+@media print{.letters-payment{display:none!important}}

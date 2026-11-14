@@ -14,9 +14,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid CV template' }, { status: 400 });
     }
     // Sandbox only: do not use live credentials or accept an amount from the browser.
-    const merchantId = '10000100';
-    const merchantKey = '46f0cd694581a';
-    // These published test credentials are specifically configured without a passphrase.\n    // Do not combine them with a live or custom sandbox passphrase.\n    const passphrase = '';
+    const merchantId = '10004002';
+    const merchantKey = 'q1cd2rdny4a53';
+    // Use Payfast's documented matching sandbox credential set with a passphrase.\n    const passphrase = 'payfast';
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://occentra.vercel.app').replace(/\/$/, '');
     const fields: Record<string, string> = {
       merchant_id: merchantId,

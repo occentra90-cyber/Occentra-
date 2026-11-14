@@ -159,3 +159,15 @@
 .preview.birthday.immersive[data-design="Dinosaur"] .balloon,
 .preview.birthday.immersive[data-design="Safari"] .balloon{animation:sway 7s ease-in-out infinite alternate}
 @media(prefers-reduced-motion:reduce){.preview.birthday.immersive .balloon,.preview.birthday.immersive .light,.preview.birthday.immersive .sparkle,.preview.birthday.immersive .preview-stars{animation:none!important}}
+
+/* Cover-letter homepage cards: override legacy three-column featured-gallery rule. */
+@media(max-width:750px){
+  .section[aria-label="Editable cover letters"] .featured-gallery{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+  .section[aria-label="Editable cover letters"] .featured-gallery .tile{min-width:0;overflow:hidden}
+  .section[aria-label="Editable cover letters"] .featured-gallery .tile>div:first-child{min-height:205px!important;padding:16px 12px!important}
+  .section[aria-label="Editable cover letters"] .featured-gallery .tile>div:first-child strong{font-size:clamp(15px,4vw,20px)!important;overflow-wrap:anywhere;line-height:1.2}
+  .section[aria-label="Editable cover letters"] .featured-gallery .tile>div:first-child p{font-size:11px!important;line-height:1.45!important;overflow-wrap:anywhere}
+  .section[aria-label="Editable cover letters"] .featured-gallery .tileinfo{display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:12px!important;padding:10px!important}
+  .section[aria-label="Editable cover letters"] .featured-gallery .tileinfo strong{white-space:normal!important}
+}
+@media(max-width:390px){.section[aria-label="Editable cover letters"] .featured-gallery{grid-template-columns:1fr!important}.section[aria-label="Editable cover letters"] .featured-gallery .tile>div:first-child{min-height:180px!important}}

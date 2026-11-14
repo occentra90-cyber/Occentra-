@@ -35,14 +35,14 @@ export async function POST(request: Request) {
     if (orderError || !order) return NextResponse.json({ error: 'Could not create order' }, { status: 503 });
     const { error: linkError } = await db.from('guest_designs').update({ purchase_id: order.id }).eq('id', design.id);
     if (linkError) return NextResponse.json({ error: 'Could not prepare checkout' }, { status: 503 });
-    // Sandbox only: do not use live credentials or accept an amount from the browser.
-    const merchantId = process.env.PAYFAST_SANDBOX_MERCHANT_ID;
-    const merchantKey = process.env.PAYFAST_SANDBOX_MERCHANT_KEY;
-    // Public Payfast sandbox credentials, not the merchant's live account.
-    const passphrase = process.env.PAYFAST_SANDBOX_PASSPHRASE || '';
+    // Live Payfast: amounts are server-defined; never trust browser-provided prices.
+    const merchantId = process.env.PAYFAST_MERCHANT_ID;
+    const merchantKey = process.env.PAYFAST_MERCHANT_KEY;
+    // The optional passphrase must match the live Payfast account if one is configured.
+    const passphrase = process.env.PAYFAST_PASSPHRASE || '';
     // Always use the public production hostname: Payfast ITN must never target a transient deployment URL.
     const baseUrl = 'https://occentra-occentra.vercel.app';
-    if (!merchantId || !merchantKey) return NextResponse.json({ error: 'Payfast sandbox is not configured' }, { status: 503 });
+    if (!merchantId || !merchantKey) return NextResponse.json({ error: 'Live Payfast is not configured' }, { status: 503 });
     const fields: Record<string, string> = {
       merchant_id: merchantId,
       merchant_key: merchantKey,
@@ -57,8 +57,8 @@ export async function POST(request: Request) {
     const paramString = Object.entries(fields).filter(([, value]) => value !== '').map(([key, value]) => key + '=' + encode(value)).join('&');
     const signatureInput = paramString + (passphrase ? '&passphrase=' + encode(passphrase) : '');
     const signature = createHash('md5').update(signatureInput).digest('hex');
-    return NextResponse.json({ url: 'https://sandbox.payfast.co.za/eng/process', fields: { ...fields, signature } });
+    return NextResponse.json({ url: 'https://www.payfast.co.za/eng/process', fields: { ...fields, signature } });
   } catch {
-    return NextResponse.json({ error: 'Could not start sandbox checkout' }, { status: 400 });
+    return NextResponse.json({ error: 'Could not start checkout' }, { status: 400 });
   }
 }

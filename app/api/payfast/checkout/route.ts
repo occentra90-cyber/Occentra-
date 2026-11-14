@@ -16,7 +16,8 @@ export async function POST(request: Request) {
     // Sandbox only: do not use live credentials or accept an amount from the browser.
     const merchantId = '10000100';
     const merchantKey = '46f0cd694581a';
-    // Use Payfast's documented matching sandbox credential set with a passphrase.\n    const passphrase = 'jt7NOE43FZPn';
+    // Public Payfast sandbox credentials, not the merchant's live account.
+    const passphrase = 'jt7NOE43FZPn';
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://occentra.vercel.app').replace(/\/$/, '');
     const fields: Record<string, string> = {
       merchant_id: merchantId,

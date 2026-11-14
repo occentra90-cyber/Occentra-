@@ -276,7 +276,7 @@ export default function Home() {
       <header>
         <div className="logo">
           OCCENTRA
-          <small>DESIGN · PERSONALIZE · CELEBRATE</small>
+          <small>PROFESSIONAL CV TEMPLATES</small>
         </div>
         <nav>
           {groups.map(([id, name]) => (
@@ -290,18 +290,18 @@ export default function Home() {
       {!chosen ? (
         <>
           <section className="hero">
-            <small>MADE FOR YOUR MOMENTS</small>
+            <small>YOUR NEXT OPPORTUNITY STARTS HERE</small>
             <h1>
-              Beautiful designs.
+              Professional CVs.
               <br />
-              <em>Made personal.</em>
+              <em>Made for you.</em>
             </h1>
-            <p>Professional CVs and elegant invitations, thoughtfully designed and easy to customize.</p>
+            <p>Choose a professional CV template, personalize your details, and save or print your CV. All templates R20.</p>
             <button
               className="goldbtn"
               onClick={() => document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Explore templates ↓
+              Explore CV templates ↓
             </button>
           </section>
 
@@ -579,7 +579,7 @@ export default function Home() {
         </main>
       )}
 
-      <footer>OCCENTRA · Design · Personalize · Celebrate</footer>
+      <footer>OCCENTRA · Professional CV Templates</footer>
     </>
   );
 }

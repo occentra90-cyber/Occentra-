@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import './cover-letters.css';
 
@@ -45,7 +45,8 @@ return <article className={'letter-paper theme-'+theme}>
 {letter.name && <strong>{letter.name}</strong>}
 </div></article>}
 export default function CoverLetters(){
-const [active,setActive]=useState(0);const [drafts,setDrafts]=useState<Letter[]>(templates.map(t=>({...t.sample,paragraphs:[...t.sample.paragraphs]})));
+const [active,setActive]=useState(0);const [editing,setEditing]=useState(false);
+useEffect(()=>{const id=new URLSearchParams(window.location.search).get('template');const index=templates.findIndex(t=>t.id===id);if(index>=0){setActive(index);setEditing(true)}},[]);const [drafts,setDrafts]=useState<Letter[]>(templates.map(t=>({...t.sample,paragraphs:[...t.sample.paragraphs]})));
 const [notice,setNotice]=useState('');
 const letter=drafts[active];const template=templates[active];
 const update=(key:keyof Letter,value:string)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,[key]:value}:d));
@@ -54,8 +55,9 @@ const removeParagraph=(index:number)=>setDrafts(old=>old.map((d,i)=>i===active?{
 const updateParagraph=(index:number,value:string)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:d.paragraphs.map((p,j)=>j===index?value:p)}:d));
 return <div className="letters-site">
 <div className="letters-top"><Link href="/">← Occentra Home</Link><strong>OCCENTRA</strong><span>Editable Cover Letters</span></div>
-<main className="letters-main"><div className="letters-intro"><span>JOB APPLICATION ESSENTIALS</span><h1>Cover letters that look professional.</h1><p>Choose a design and customise the complete sample letter. Your edits appear immediately. The names and employers shown are fictional examples.</p></div>
-<div className="letters-grid">{templates.map((t,i)=><button type="button" className={'letter-choice '+(active===i?'chosen':'')} key={t.id} onClick={()=>{setActive(i);setNotice('')}} aria-pressed={active===i}><div className={'letter-thumb theme-'+t.id}><div className="thumb-name">{t.sample.name}</div><div className="thumb-line"/><div className="thumb-line short"/><div className="thumb-gap"/>{Array.from({length:9},(_,j)=><div className={'thumb-line '+(j%3===0?'short':'')} key={j}/>)}</div><b>{t.title}</b><small>{t.role}</small></button>)}</div>
+<main className="letters-main">{!editing && <div className="letters-intro"><span>JOB APPLICATION ESSENTIALS</span><h1>Cover letters that look professional.</h1><p>Choose a design and customise the complete sample letter. Your edits appear immediately. The names and employers shown are fictional examples.</p></div>}
+{!editing && <div className="letters-grid">{templates.map((t,i)=><button type="button" className={'letter-choice '+(active===i?'chosen':'')} key={t.id} onClick={()=>{setActive(i);setEditing(true);setNotice('');window.history.replaceState({},'', '/cover-letters?template='+t.id)}} aria-pressed={active===i}><div className={'letter-thumb theme-'+t.id}><div className="thumb-name">{t.sample.name}</div><div className="thumb-line"/><div className="thumb-line short"/><div className="thumb-gap"/>{Array.from({length:9},(_,j)=><div className={'thumb-line '+(j%3===0?'short':'')} key={j}/>)}</div><b>{t.title}</b><small>{t.role}</small></button>)}</div>}
+{editing && <div className="letters-editor-nav"><button type="button" onClick={()=>{setEditing(false);window.history.replaceState({},'','/cover-letters')}}>← All cover letter designs</button><strong>{template.title}</strong></div>}
 <div className="letters-workspace"><section className="letters-preview"><div className="letters-section-title"><h2>Live preview</h2><span>{template.title}</span></div><LetterPage letter={letter} theme={template.id}/><p className="letters-note">This is a live sample preview. PDF export and paid checkout are not yet enabled.</p></section>
 <section className="letters-editor"><div className="letters-section-title"><h2>Edit your letter</h2><button type="button" onClick={()=>{setDrafts(old=>old.map((d,i)=>i===active?{...template.sample,paragraphs:[...template.sample.paragraphs]}:d));setNotice('Example restored.')}}>Reset example</button></div>
 {([['name','Full name'],['city','City and province'],['phone','Phone number'],['email','Email'],['date','Date'],['recipient','Recipient'],['company','Company'],['location','Company location'],['subject','Job application subject'],['greeting','Greeting']] as [keyof Letter,string][]).map(([key,label])=><label key={key}>{label}<input value={letter[key] as string} onChange={e=>update(key,e.target.value)}/></label>)}

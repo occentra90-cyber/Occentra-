@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createHash, randomUUID } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
@@ -10,23 +11,40 @@ function encode(value: string) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    if (typeof body?.designId !== 'string' || !/^cv-[0-5]$/.test(body.designId)) {
+    if (typeof body?.designId !== 'string' || !/^cv-[0-5]$/.test(body.designId) || !/^[a-f0-9]{64}$/.test(body?.token || '')) {
       return NextResponse.json({ error: 'Invalid CV template' }, { status: 400 });
     }
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !secret) return NextResponse.json({ error: 'Checkout is not configured' }, { status: 503 });
+    const db = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
+    const tokenHash = createHash('sha256').update(body.token).digest('hex');
+    const { data: design, error: designError } = await db.from('guest_designs')
+      .select('id,template_id,status,expires_at').eq('token_hash', tokenHash).maybeSingle();
+    if (designError || !design || design.template_id !== body.designId || design.status !== 'draft' || Date.parse(design.expires_at) <= Date.now()) {
+      return NextResponse.json({ error: 'Save an editable CV before checkout' }, { status: 400 });
+    }
+    const merchantReference = randomUUID();
+    const { error: orderError } = await db.from('purchases').insert({
+      merchant_reference: merchantReference, template_id: design.template_id, amount_cents: 2000, currency: 'ZAR', status: 'pending'
+    });
+    if (orderError) return NextResponse.json({ error: 'Could not create order' }, { status: 503 });
+    const { error: linkError } = await db.from('guest_designs').update({ purchase_id: null }).eq('id', design.id);
+    if (linkError) return NextResponse.json({ error: 'Could not prepare checkout' }, { status: 503 });
     // Sandbox only: do not use live credentials or accept an amount from the browser.
     const merchantId = '10000100';
     const merchantKey = '46f0cd694581a';
     // Public Payfast sandbox credentials, not the merchant's live account.
     const passphrase = 'jt7NOE43FZPn';
-    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://occentra.vercel.app').replace(/\/$/, '');
+    const baseUrl = new URL(request.url).origin;
     const fields: Record<string, string> = {
       merchant_id: merchantId,
       merchant_key: merchantKey,
-      return_url: baseUrl + '/?payment=returned',
-      cancel_url: baseUrl + '/?payment=cancelled',
+      return_url: baseUrl + '/?design=' + body.token + '&payment=returned',
+      cancel_url: baseUrl + '/?design=' + body.token + '&payment=cancelled',
       notify_url: baseUrl + '/api/payfast/notify',
       // An ITN endpoint is required before real payment/download unlocking is enabled.
-      m_payment_id: randomUUID(),
+      m_payment_id: merchantReference,
       amount: '20.00',
       item_name: 'Occentra CV Template ' + body.designId,
     };

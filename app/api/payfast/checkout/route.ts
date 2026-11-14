@@ -11,7 +11,7 @@ function encode(value: string) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    if (typeof body?.designId !== 'string' || !/^cv-[0-5]$/.test(body.designId) || !/^[a-f0-9]{64}$/.test(body?.token || '')) {
+    if (typeof body?.designId !== 'string' || !(/^(cv-[0-5]|cover-(classic|navy|sage|executive))$/.test(body.designId)) || !/^[a-f0-9]{64}$/.test(body?.token || '')) {
       return NextResponse.json({ error: 'Invalid CV template' }, { status: 400 });
     }
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -24,9 +24,13 @@ export async function POST(request: Request) {
     if (designError || !design || design.template_id !== body.designId || design.status !== 'draft' || Date.parse(design.expires_at) <= Date.now()) {
       return NextResponse.json({ error: 'Save an editable CV before checkout' }, { status: 400 });
     }
+    const cover = body.designId.startsWith('cover-');
+    const amountCents = cover ? 1500 : 2000;
+    const amount = cover ? '15.00' : '20.00';
+    const itemName = (cover ? 'Occentra Cover Letter ' : 'Occentra CV Template ') + body.designId;
     const merchantReference = randomUUID();
     const { data: order, error: orderError } = await db.from('purchases').insert({
-      merchant_reference: merchantReference, template_id: design.template_id, amount_cents: 2000, currency: 'ZAR', status: 'pending'
+      merchant_reference: merchantReference, template_id: design.template_id, amount_cents: amountCents, currency: 'ZAR', status: 'pending'
     }).select('id').single();
     if (orderError || !order) return NextResponse.json({ error: 'Could not create order' }, { status: 503 });
     const { error: linkError } = await db.from('guest_designs').update({ purchase_id: order.id }).eq('id', design.id);
@@ -42,13 +46,13 @@ export async function POST(request: Request) {
     const fields: Record<string, string> = {
       merchant_id: merchantId,
       merchant_key: merchantKey,
-      return_url: baseUrl + '/?design=' + body.token + '&payment=returned',
-      cancel_url: baseUrl + '/?design=' + body.token + '&payment=cancelled',
+      return_url: baseUrl + (cover ? '/cover-letters?template=' + body.designId.replace('cover-', '') + '&design=' + body.token + '&payment=returned' : '/?design=' + body.token + '&payment=returned'),
+      cancel_url: baseUrl + (cover ? '/cover-letters?template=' + body.designId.replace('cover-', '') + '&design=' + body.token + '&payment=cancelled' : '/?design=' + body.token + '&payment=cancelled'),
       notify_url: baseUrl + '/api/payfast/notify',
       // An ITN endpoint is required before real payment/download unlocking is enabled.
       m_payment_id: merchantReference,
-      amount: '20.00',
-      item_name: 'Occentra CV Template ' + body.designId,
+      amount,
+      item_name: itemName,
     };
     const paramString = Object.entries(fields).filter(([, value]) => value !== '').map(([key, value]) => key + '=' + encode(value)).join('&');
     const signatureInput = paramString + (passphrase ? '&passphrase=' + encode(passphrase) : '');

@@ -3,9 +3,6 @@ export type Design = { id: string; category: Category; name: string; accent: str
 
 export const groups: [Category, string, string][] = [
   ['cv', 'Editable CVs', 'All templates R20'],
-  ['baby', 'Baby Shower', 'Stationary R49 · Living 3D R99'],
-  ['wedding', 'Weddings', 'Approved wedding collections · Stationary R79'],
-  ['birthday', 'Birthdays', 'Stationary R49 · Animated R99'],
 ];
 
 const names: Record<Category, string[]> = {

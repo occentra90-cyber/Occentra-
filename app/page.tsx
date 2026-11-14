@@ -492,12 +492,19 @@ export default function Home() {
                     ['Executive Minimal','Operations Manager','#f4f1ed','#292929']
                   ] as const).map(([title,role,bg,ink]) => (
                     <a href="/cover-letters" className="tile" key={title} style={{textDecoration:'none',color:'inherit'}}>
-                      <div style={{background:bg,color:ink,minHeight:260,padding:'28px 20px',boxShadow:'inset 0 0 0 1px #ddd',textAlign:'left',fontFamily:'Georgia,serif'}}>
-                        <strong style={{fontSize:19,display:'block',marginBottom:12}}>{title}</strong>
-                        <div style={{height:1,background:'currentColor',opacity:.4,marginBottom:22}}/>
-                        <p style={{fontSize:12,marginBottom:15}}>Dear Hiring Manager,</p>
-                        <p style={{fontSize:12,lineHeight:1.7}}>I am writing to apply for the {role} position. I would welcome the opportunity to contribute my skills and experience to your team.</p>
-                        <p style={{fontSize:12,marginTop:16}}>Yours faithfully,</p>
+                      <div className="cover-letter-mini" style={{background:bg,color:ink}}>
+                        <div className="cover-letter-mini-page">
+                          <h3>{title}</h3>
+                          <div className="cover-letter-mini-contact">Durban · 071 234 5678 · example@email.com</div>
+                          <div className="cover-letter-mini-rule" />
+                          <p>14 November 2026</p>
+                          <p>The Hiring Manager<br/>South Africa</p>
+                          <strong>RE: Application for {role}</strong>
+                          <p>Dear Hiring Manager,</p>
+                          <p>I am writing to apply for the {role} position. I am a motivated applicant and would welcome the opportunity to contribute positively to your organisation.</p>
+                          <p>Thank you for considering my application.</p>
+                          <p>Yours faithfully,</p>
+                        </div>
                       </div>
                       <div className="tileinfo"><span>{title}</span><strong>Edit letter →</strong></div>
                     </a>

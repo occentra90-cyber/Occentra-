@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       merchant_key: merchantKey,
       return_url: baseUrl + '/?payment=returned',
       cancel_url: baseUrl + '/?payment=cancelled',
+      notify_url: baseUrl + '/api/payfast/notify',
       // An ITN endpoint is required before real payment/download unlocking is enabled.
       m_payment_id: randomUUID(),
       amount: '20.00',

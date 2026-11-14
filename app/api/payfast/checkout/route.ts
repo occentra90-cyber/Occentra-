@@ -4,7 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 export const runtime = 'nodejs';
 
 function encode(value: string) {
-  return encodeURIComponent(value.trim()).replace(/%20/g, '+').replace(/%[0-9a-f]{2}/g, (m) => m.toUpperCase()).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  return encodeURIComponent(value.trim()).replace(/~/g, '%7E').replace(/%20/g, '+').replace(/%[0-9a-f]{2}/g, (m) => m.toUpperCase()).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 }
 
 export async function POST(request: Request) {
@@ -14,9 +14,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid CV template' }, { status: 400 });
     }
     // Sandbox only: do not use live credentials or accept an amount from the browser.
-    const merchantId = process.env.PAYFAST_SANDBOX_MERCHANT_ID || '10000100';
-    const merchantKey = process.env.PAYFAST_SANDBOX_MERCHANT_KEY || '46f0cd694581a';
-    const passphrase = process.env.PAYFAST_SANDBOX_PASSPHRASE || '';
+    const merchantId = '10000100';
+    const merchantKey = '46f0cd694581a';
+    // These published test credentials are specifically configured without a passphrase.\n    // Do not combine them with a live or custom sandbox passphrase.\n    const passphrase = '';
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://occentra.vercel.app').replace(/\/$/, '');
     const fields: Record<string, string> = {
       merchant_id: merchantId,

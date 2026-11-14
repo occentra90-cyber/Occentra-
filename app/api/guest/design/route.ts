@@ -18,10 +18,10 @@ async function purgeExpired() {
   if (error) console.error('guest_cleanup_failed', error.code);
 }
 function fail(error: string, status: number) { return NextResponse.json({ error }, { status, headers: { 'Cache-Control': 'no-store' } }); }
-function validFields(x: unknown): x is Record<string, string> {
+function validFields(x: unknown): x is Record<string, string | string[]> {
   return !!x && typeof x === 'object' && !Array.isArray(x) &&
     Object.keys(x).length <= 40 &&
-    Object.entries(x).every(([k, v]) => k.length <= 50 && typeof v === 'string' && v.length <= 5000);
+    Object.entries(x).every(([k, v]) => k.length <= 50 && ((typeof v === 'string' && v.length <= 5000) || (k === 'paragraphs' && Array.isArray(v) && v.length <= 15 && v.every(p => typeof p === 'string' && p.length <= 5000))));
 }
 function validSettings(x: unknown): x is Record<string, boolean> {
   return !!x && typeof x === 'object' && !Array.isArray(x) &&

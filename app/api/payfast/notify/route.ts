@@ -10,6 +10,7 @@ export async function POST(req: Request) {
     if (body.length > 20000) { console.warn('payfast_itn_rejected', { reason: 'payload_too_large' }); return new NextResponse('Too large',{status:413}); }
     const data = new URLSearchParams(body);
     const signature = data.get('signature') || '';
+    console.info('payfast_itn_shape', { contentType: req.headers.get('content-type')?.split(';')[0] || 'missing', fieldCount: [...data.keys()].length, fieldNames: [...data.keys()].slice(0,35), hasMerchantId: data.has('merchant_id'), hasSignature: data.has('signature'), signatureLength: signature.length, signatureHex: /^[a-f0-9]{32}$/i.test(signature), merchantIdLength: (data.get('merchant_id') || '').length, merchantIdMatches: data.get('merchant_id') === process.env.PAYFAST_SANDBOX_MERCHANT_ID });
     if (!process.env.PAYFAST_SANDBOX_MERCHANT_ID || data.get('merchant_id') !== process.env.PAYFAST_SANDBOX_MERCHANT_ID || !/^[a-f0-9]{32}$/i.test(signature)) { console.warn('payfast_itn_rejected', { reason: 'merchant_or_signature_format', merchantConfigured: Boolean(process.env.PAYFAST_SANDBOX_MERCHANT_ID), merchantMatches: data.get('merchant_id') === process.env.PAYFAST_SANDBOX_MERCHANT_ID, signatureLengthValid: signature.length === 32, signatureHexValid: /^[a-f0-9]{32}$/i.test(signature) }); return new NextResponse('Invalid notification',{status:400}); }
     // Payfast ITN includes empty fields in the signed string, in posted order, stopping at signature.
     // Unlike checkout generation, ITN validation must not trim received field values.

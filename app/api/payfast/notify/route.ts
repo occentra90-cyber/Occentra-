@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 const encode = (v: string) => encodeURIComponent(v.trim()).replace(/~/g,'%7E').replace(/%20/g,'+').replace(/[!'()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
 export async function POST(req: Request) {
@@ -24,7 +25,40 @@ export async function POST(req: Request) {
     if (!/^Occentra CV Template cv-[0-5]$/.test(data.get('item_name')||'') || Number(data.get('amount_gross')) !== 20 || !/^[a-f0-9-]{36}$/i.test(data.get('m_payment_id')||'')) { console.warn('payfast_itn_rejected', { reason: 'order_details' }); return new NextResponse('Invalid order',{status:400}); }
     const validation = await fetch('https://sandbox.payfast.co.za/eng/query/validate',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:params,cache:'no-store',signal:AbortSignal.timeout(10000)});
     if (!validation.ok || (await validation.text()).trim()!=='VALID') { console.warn('payfast_itn_rejected', { reason: 'remote_validation', status: validation.status }); return new NextResponse('Invalid payment',{status:400}); }
-    // No durable order database yet: do not unlock a CV from this notification.
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !secret) return new NextResponse('Database not configured', { status: 503 });
+    const db = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
+    const reference = data.get('m_payment_id')!;
+    const { data: order, error: orderError } = await db.from('purchases')
+      .select('id,merchant_reference,template_id,amount_cents,currency,status,payfast_payment_id')
+      .eq('merchant_reference', reference).maybeSingle();
+    if (orderError) throw orderError;
+    if (!order || order.template_id !== data.get('item_name')!.replace('Occentra CV Template ', '') ||
+      order.amount_cents !== 2000 || order.currency !== 'ZAR') {
+      return new NextResponse('Order mismatch', { status: 400 });
+    }
+    const paymentId = data.get('pf_payment_id');
+    if (!paymentId) return new NextResponse('Missing payment ID', { status: 400 });
+    if (order.status === 'paid') {
+      return new NextResponse(order.payfast_payment_id === paymentId ? 'Already verified' : 'Payment ID mismatch',
+        { status: order.payfast_payment_id === paymentId ? 200 : 409 });
+    }
+    if (order.status !== 'pending') return new NextResponse('Order not pending', { status: 409 });
+    const { data: guest, error: guestError } = await db.from('guest_designs')
+      .select('id,status,expires_at').eq('purchase_id', order.id).maybeSingle();
+    if (guestError) throw guestError;
+    if (!guest || guest.status !== 'draft' || Date.parse(guest.expires_at) <= Date.now()) {
+      return new NextResponse('Saved design unavailable', { status: 409 });
+    }
+    // A verified notification alone may update payment state. Never trust browser redirects.
+    const { error: paidError } = await db.from('purchases')
+      .update({ status: 'paid', payfast_payment_id: paymentId })
+      .eq('id', order.id).eq('status', 'pending');
+    if (paidError) throw paidError;
+    const { error: lockError } = await db.from('guest_designs')
+      .update({ status: 'paid' }).eq('id', guest.id).eq('status', 'draft');
+    if (lockError) throw lockError;
     console.info('payfast_itn_verified', { paymentStatus: data.get('payment_status') === 'COMPLETE' ? 'COMPLETE' : 'OTHER' });
     return new NextResponse('Notification verified',{status:200});
   } catch (error) {

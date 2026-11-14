@@ -40,25 +40,28 @@ export async function POST(req: Request) {
     }
     const paymentId = data.get('pf_payment_id');
     if (!paymentId) return new NextResponse('Missing payment ID', { status: 400 });
-    if (order.status === 'paid') {
-      return new NextResponse(order.payfast_payment_id === paymentId ? 'Already verified' : 'Payment ID mismatch',
-        { status: order.payfast_payment_id === paymentId ? 200 : 409 });
-    }
-    if (order.status !== 'pending') return new NextResponse('Order not pending', { status: 409 });
+    if (order.status === 'paid' && order.payfast_payment_id !== paymentId) return new NextResponse('Payment ID mismatch', { status: 409 });
+    if (order.status !== 'pending' && order.status !== 'paid') return new NextResponse('Order not pending', { status: 409 });
     const { data: guest, error: guestError } = await db.from('guest_designs')
       .select('id,status,expires_at').eq('purchase_id', order.id).maybeSingle();
     if (guestError) throw guestError;
-    if (!guest || guest.status !== 'draft' || Date.parse(guest.expires_at) <= Date.now()) {
+    if (!guest || Date.parse(guest.expires_at) <= Date.now()) {
       return new NextResponse('Saved design unavailable', { status: 409 });
     }
-    // A verified notification alone may update payment state. Never trust browser redirects.
-    const { error: paidError } = await db.from('purchases')
-      .update({ status: 'paid', payfast_payment_id: paymentId })
-      .eq('id', order.id).eq('status', 'pending');
-    if (paidError) throw paidError;
-    const { error: lockError } = await db.from('guest_designs')
-      .update({ status: 'paid' }).eq('id', guest.id).eq('status', 'draft');
-    if (lockError) throw lockError;
+    // Lock the design first. A retry can finish recording payment if the second write fails.
+    if (guest.status === 'draft') {
+      const { error: lockError } = await db.from('guest_designs')
+        .update({ status: 'paid' }).eq('id', guest.id).eq('status', 'draft');
+      if (lockError) throw lockError;
+    } else if (guest.status !== 'paid') {
+      return new NextResponse('Invalid design state', { status: 409 });
+    }
+    if (order.status === 'pending') {
+      const { error: paidError } = await db.from('purchases')
+        .update({ status: 'paid', payfast_payment_id: paymentId })
+        .eq('id', order.id).eq('status', 'pending');
+      if (paidError) throw paidError;
+    }
     console.info('payfast_itn_verified', { paymentStatus: data.get('payment_status') === 'COMPLETE' ? 'COMPLETE' : 'OTHER' });
     return new NextResponse('Notification verified',{status:200});
   } catch (error) {

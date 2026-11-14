@@ -49,6 +49,8 @@ const [active,setActive]=useState(0);const [drafts,setDrafts]=useState<Letter[]>
 const [notice,setNotice]=useState('');
 const letter=drafts[active];const template=templates[active];
 const update=(key:keyof Letter,value:string)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,[key]:value}:d));
+const addParagraph=()=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:[...d.paragraphs,'']}:d));
+const removeParagraph=(index:number)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:d.paragraphs.filter((_,j)=>j!==index)}:d));
 const updateParagraph=(index:number,value:string)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:d.paragraphs.map((p,j)=>j===index?value:p)}:d));
 return <div className="letters-site">
 <div className="letters-top"><Link href="/">← Occentra Home</Link><strong>OCCENTRA</strong><span>Editable Cover Letters</span></div>
@@ -58,7 +60,7 @@ return <div className="letters-site">
 <section className="letters-editor"><div className="letters-section-title"><h2>Edit your letter</h2><button type="button" onClick={()=>{setDrafts(old=>old.map((d,i)=>i===active?{...template.sample,paragraphs:[...template.sample.paragraphs]}:d));setNotice('Example restored.')}}>Reset example</button></div>
 {([['name','Full name'],['city','City and province'],['phone','Phone number'],['email','Email'],['date','Date'],['recipient','Recipient'],['company','Company'],['location','Company location'],['subject','Job application subject'],['greeting','Greeting']] as [keyof Letter,string][]).map(([key,label])=><label key={key}>{label}<input value={letter[key] as string} onChange={e=>update(key,e.target.value)}/></label>)}
 <h3>Letter paragraphs</h3>{letter.paragraphs.map((p,i)=><label key={i}>Paragraph {i+1}<textarea rows={Math.max(3,Math.ceil(p.length/75))} value={p} onChange={e=>updateParagraph(i,e.target.value)}/></label>)}
-<button type="button" className="letter-add" onClick={()=>update('paragraphs' as keyof Letter, '' as string)} style={{display:'none'}}>Add paragraph</button>
+<button type="button" className="letter-add" onClick={addParagraph}>+ Add paragraph</button>
 <label>Closing<input value={letter.closing} onChange={e=>update('closing',e.target.value)}/></label>
 <p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p>{notice && <p role="status">{notice}</p>}
 </section></div></main></div>}

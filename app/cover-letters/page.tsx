@@ -72,7 +72,7 @@ useEffect(()=>{
      const index=templates.findIndex(t=>t.id===id);
      if(index>=0){
       setDrafts(old=>old.map((d,i)=>i===index?record.design.fields as Letter:d));
-      setActive(index);setEditing(true);setPaid(true);setNotice('Sandbox payment verified. You can download your letter.');
+      setActive(index);setEditing(true);setPaid(true);setNotice('Payment verified. You can download your letter.');
      }
     }
     return;
@@ -115,5 +115,5 @@ return <div className="letters-site">
 <h3>Letter paragraphs</h3>{letter.paragraphs.map((p,i)=><label key={i}>Paragraph {i+1}<textarea rows={Math.max(3,Math.ceil(p.length/75))} value={p} onChange={e=>updateParagraph(i,e.target.value)}/></label>)}
 <button type="button" className="letter-add" onClick={addParagraph}>+ Add paragraph</button>
 <label>Closing<input value={letter.closing} onChange={e=>update('closing',e.target.value)}/></label>
-<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : <button type="button" disabled={checkingOut} onClick={pay}>{checkingOut?'Opening Payfast…':'Pay R15 · Payfast Sandbox'}</button>}<p className="letters-note">Sandbox test checkout. Download unlocks only after payment verification.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
+<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : <button type="button" disabled={checkingOut} onClick={pay}>{checkingOut?'Opening Payfast…':'Pay R15 · Payfast'}</button>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
 </section></div></main></div>}

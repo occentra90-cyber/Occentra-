@@ -13,6 +13,10 @@ function db() {
   if (!url || !secret) throw new Error('Guest saving is not configured');
   return createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
 }
+async function purgeExpired() {
+  const { error } = await db().from('guest_designs').delete().lt('expires_at', new Date().toISOString());
+  if (error) console.error('guest_cleanup_failed', error.code);
+}
 function fail(error: string, status: number) { return NextResponse.json({ error }, { status, headers: { 'Cache-Control': 'no-store' } }); }
 function validFields(x: unknown): x is Record<string, string> {
   return !!x && typeof x === 'object' && !Array.isArray(x) &&
@@ -30,6 +34,7 @@ async function lookup(token: string) {
 }
 export async function POST(request: Request) {
   try {
+    await purgeExpired();
     const body = await request.json();
     const design = designs.find(d => d.id === body?.templateId);
     if (!design || !validFields(body?.fields) || !validSettings(body?.settings)) return fail('Invalid design', 400);
@@ -38,6 +43,7 @@ export async function POST(request: Request) {
       token_hash: hash(token), template_id: design.id, category: design.category,
       title: String(body.fields.name || design.name).slice(0, 120),
       fields: body.fields, settings: body.settings,
+      expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
     }).select('expires_at').single();
     if (error) throw error;
     return NextResponse.json({ token, expiresAt: data.expires_at }, { headers: { 'Cache-Control': 'no-store' } });
@@ -47,6 +53,7 @@ export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get('token') || '';
   if (!tokenPattern.test(token)) return fail('Invalid private link', 400);
   try {
+    await purgeExpired();
     const { data, error } = await lookup(token);
     if (error) throw error;
     if (!data || Date.parse(data.expires_at) <= Date.now()) return fail('This link has expired or is unavailable', 404);

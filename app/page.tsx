@@ -379,6 +379,7 @@ export default function Home() {
               {name}
             </button>
           ))}
+          <a href="/cover-letters" style={{padding:'10px 14px',display:'inline-block',color:'inherit',textDecoration:'none'}}>Cover Letters</a>
         </nav>
       </header>
 

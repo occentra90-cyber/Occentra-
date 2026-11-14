@@ -25,11 +25,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Save an editable CV before checkout' }, { status: 400 });
     }
     const merchantReference = randomUUID();
-    const { error: orderError } = await db.from('purchases').insert({
+    const { data: order, error: orderError } = await db.from('purchases').insert({
       merchant_reference: merchantReference, template_id: design.template_id, amount_cents: 2000, currency: 'ZAR', status: 'pending'
-    });
-    if (orderError) return NextResponse.json({ error: 'Could not create order' }, { status: 503 });
-    const { error: linkError } = await db.from('guest_designs').update({ purchase_id: null }).eq('id', design.id);
+    }).select('id').single();
+    if (orderError || !order) return NextResponse.json({ error: 'Could not create order' }, { status: 503 });
+    const { error: linkError } = await db.from('guest_designs').update({ purchase_id: order.id }).eq('id', design.id);
     if (linkError) return NextResponse.json({ error: 'Could not prepare checkout' }, { status: 503 });
     // Sandbox only: do not use live credentials or accept an amount from the browser.
     const merchantId = '10000100';

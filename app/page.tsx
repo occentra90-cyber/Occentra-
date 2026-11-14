@@ -236,6 +236,38 @@ export default function Home() {
   const [motion, setMotion] = useState(true);
   const [notice, setNotice] = useState('');
 
+  const [checkingOut, setCheckingOut] = useState(false);
+
+  async function startSandboxCheckout() {
+    if (!selected || selected.category !== 'cv') return;
+    setCheckingOut(true);
+    setNotice('');
+    try {
+      const response = await fetch('/api/payfast/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designId: selected.id }),
+      });
+      if (!response.ok) throw new Error('Unable to start Payfast checkout');
+      const { url, fields: paymentFields } = await response.json();
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url;
+      Object.entries(paymentFields as Record<string, string>).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    } catch {
+      setNotice('Sandbox checkout could not start. Please try again.');
+      setCheckingOut(false);
+    }
+  }
+
   const update = (key: keyof Fields, value: string) => setFields((old) => ({ ...old, [key]: value }));
 
   function open(d: Design) {
@@ -565,9 +597,10 @@ export default function Home() {
 
               <button
                 className="goldbtn"
-                onClick={() => setNotice('Payfast checkout is not active yet. No payment was charged.')}
+                onClick={chosen.category === 'cv' ? startSandboxCheckout : () => setNotice('Checkout is not available for this category.')}
+                disabled={checkingOut}
               >
-                Pay R{price(chosen.category, living)} · Coming soon
+                {checkingOut ? 'Opening Payfast Sandbox…' : 'Test Pay R20 · Payfast Sandbox'}
               </button>
               {notice && (
                 <p className="notice" role="status">

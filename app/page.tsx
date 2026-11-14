@@ -637,7 +637,7 @@ export default function Home() {
                     References
                     <input value={fields.references} onChange={(e) => update('references', e.target.value)} />
                   </label>
-                  {guestLocked ? <button type="button" className="goldbtn" onClick={() => window.print()}>Print / Save CV as PDF</button> : <p>PDF download unlocks after verified payment. Save your CV first.</p>}
+                  {!guestLocked && <p>PDF download unlocks after verified payment. Save your CV first.</p>}
                 </>
               ) : (
                 <>
@@ -671,6 +671,7 @@ export default function Home() {
               )}
 
               </fieldset>
+              {guestLocked && chosen.category === 'cv' && <button type="button" className="goldbtn" onClick={() => window.print()}>Print / Save CV as PDF</button>}
               <button
                 className="goldbtn"
                 onClick={chosen.category === 'cv' ? startSandboxCheckout : () => setNotice('Checkout is not available for this category.')}

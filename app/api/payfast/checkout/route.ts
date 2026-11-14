@@ -32,12 +32,13 @@ export async function POST(request: Request) {
     const { error: linkError } = await db.from('guest_designs').update({ purchase_id: order.id }).eq('id', design.id);
     if (linkError) return NextResponse.json({ error: 'Could not prepare checkout' }, { status: 503 });
     // Sandbox only: do not use live credentials or accept an amount from the browser.
-    const merchantId = '10000100';
-    const merchantKey = '46f0cd694581a';
+    const merchantId = process.env.PAYFAST_SANDBOX_MERCHANT_ID;
+    const merchantKey = process.env.PAYFAST_SANDBOX_MERCHANT_KEY;
     // Public Payfast sandbox credentials, not the merchant's live account.
-    const passphrase = 'jt7NOE43FZPn';
+    const passphrase = process.env.PAYFAST_SANDBOX_PASSPHRASE || '';
     // Always use the public production hostname: Payfast ITN must never target a transient deployment URL.
     const baseUrl = 'https://occentra-occentra.vercel.app';
+    if (!merchantId || !merchantKey) return NextResponse.json({ error: 'Payfast sandbox is not configured' }, { status: 503 });
     const fields: Record<string, string> = {
       merchant_id: merchantId,
       merchant_key: merchantKey,

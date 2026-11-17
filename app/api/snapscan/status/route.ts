@@ -1,3 +1,4 @@
+import { describeSnapscanFailure } from '../../../../lib/snapscan-errors';
 import { createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
@@ -35,7 +36,8 @@ export async function GET(request: Request) {
     return reply({ paid: status === 'paid' });
   } catch (error) {
     // Expose the failure category in server logs; never log the private token.
-    console.error('SnapScan verification failed:', error instanceof Error ? error.message : 'unknown error');
-    return reply({ error: 'Payment verification is temporarily unavailable' }, 503);
+    const failure = describeSnapscanFailure(error);
+    console.error('SnapScan verification failed:', failure.log);
+    return NextResponse.json(failure.body, { status: failure.status, headers: failure.headers });
   }
 }

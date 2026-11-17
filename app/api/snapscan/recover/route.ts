@@ -1,8 +1,8 @@
-import { describeSnapscanFailure } from '../../../../lib/snapscan-errors';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { reconcileSnapscanPayment } from '../../../../lib/snapscan-reconcile';
 import { snapscanVerificationConfigured } from '../../../../lib/snapscan';
+import { describeSnapscanFailure, fromDatabaseError } from '../../../../lib/snapscan-errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         { auth: { persistSession: false, autoRefreshToken: false } });
       const { data: order, error: orderError } = await db.from('purchases')
         .select('template_id').eq('merchant_reference', reference).maybeSingle();
-      if (orderError) throw orderError;
+      if (orderError) throw fromDatabaseError(orderError);
       // A verified receipt restores entitlement to its purchased template,
       // never to a private CV or cover-letter draft containing personal data.
       if (!order || !/^(cv-[0-5]|cover-(classic|navy|sage|executive))$/.test(order.template_id)) {
@@ -44,8 +44,10 @@ export async function POST(request: Request) {
     }
     return respond({ paid: false, found: result !== 'unknown' });
   } catch (error) {
+    // Distinguish "retry will help" (503) from "needs a human" (409) instead of one generic message.
+    if (error instanceof SyntaxError) return respond({ error: 'Invalid request' }, 400);
     const failure = describeSnapscanFailure(error);
-    console.error('SnapScan receipt reconciliation failed:', failure.log);
-    return NextResponse.json(failure.body, { status: failure.status, headers: failure.headers });
+    console.error('SnapScan receipt reconciliation failed', failure.log);
+    return respond(failure.body, failure.status);
   }
 }

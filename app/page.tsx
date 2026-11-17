@@ -313,40 +313,6 @@ export default function Home() {
     return () => { active = false; };
   }, []);
 
-  async function startPayfastCheckout() {
-    if (!selected || selected.category !== 'cv' || guestLocked) return;
-    setCheckingOut(true);
-    setNotice('');
-    try {
-      const savedResponse = await fetch('/api/guest/design', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templateId: selected.id, fields, settings: { living, motion, sparkles } }) });
-      const saved = await savedResponse.json();
-      if (!savedResponse.ok || !saved.token) throw new Error('Could not prepare your design');
-      setGuestToken(saved.token);
-      const response = await fetch('/api/payfast/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designId: selected.id, token: saved.token }),
-      });
-      if (!response.ok) throw new Error('Unable to start Payfast checkout');
-      const { url, fields: paymentFields } = await response.json();
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = url;
-      Object.entries(paymentFields as Record<string, string>).forEach(([name, value]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
-      });
-      document.body.appendChild(form);
-      form.submit();
-    } catch {
-      setNotice('Payfast checkout could not start. Please try again.');
-      setCheckingOut(false);
-    }
-  }
-
   async function startSnapscanCheckout() {
     if (!selected || selected.category !== 'cv' || guestLocked || checkingOut || !snapscanAvailable) return;
     setCheckingOut(true);
@@ -737,17 +703,13 @@ export default function Home() {
 
               </fieldset>
               {guestLocked && chosen.category === 'cv' && <button type="button" className="goldbtn" onClick={() => window.print()}>Download CV as PDF</button>}
-              <button
-                className="goldbtn"
-                onClick={chosen.category === 'cv' ? startPayfastCheckout : () => setNotice('Checkout is not available for this category.')}
-                disabled={checkingOut || guestLocked}
-              >
-                {checkingOut ? 'Opening Payfast…' : 'Pay R20 · Payfast'}
-              </button>
-              {snapscanAvailable && chosen.category === 'cv' && !guestLocked && (
-                <button type="button" className="goldbtn" onClick={startSnapscanCheckout} disabled={checkingOut}>
-                  {checkingOut ? 'Opening checkout…' : 'Pay R20 · SnapScan'}
+              {chosen.category === 'cv' && !guestLocked && (
+                <button type="button" className="goldbtn" onClick={startSnapscanCheckout} disabled={checkingOut || !snapscanAvailable}>
+                  {checkingOut ? 'Opening SnapScan…' : snapscanAvailable ? 'Pay R20 · SnapScan' : 'SnapScan checkout temporarily unavailable'}
                 </button>
+              )}
+              {chosen.category === 'cv' && !guestLocked && !snapscanAvailable && (
+                <p>We are finishing our secure SnapScan connection. Please check back soon to purchase your CV.</p>
               )}
               {guestLocked && <p>Payment verified. Download your CV as many times as you need while this page is open.</p>}
               {notice && (

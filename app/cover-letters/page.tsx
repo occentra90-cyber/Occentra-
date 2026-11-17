@@ -92,26 +92,19 @@ useEffect(()=>{
  };
  check();return()=>{stopped=true};
 },[]);
-async function pay(provider:'payfast'|'snapscan'='payfast'){
- if(checkingOut||paid)return;
+async function pay(){
+ if(checkingOut||paid||!snapscanAvailable)return;
  setCheckingOut(true);setNotice('');
  try{
   const savedResponse=await fetch('/api/guest/design',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({templateId:'cover-'+template.id,fields:letter,settings:{}})});
   const saved=await savedResponse.json();
   if(!savedResponse.ok||!saved.token)throw new Error(saved.error||'Unable to save letter');
   setPaymentToken(saved.token);
-  const response=await fetch(provider==='snapscan'?'/api/snapscan/checkout':'/api/payfast/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({designId:'cover-'+template.id,token:saved.token})});
+  const response=await fetch('/api/snapscan/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({designId:'cover-'+template.id,token:saved.token})});
   const payment=await response.json();
-  if(provider==='snapscan'){
-   if(!response.ok||!payment.url)throw new Error(payment.error||'SnapScan checkout unavailable');
-   sessionStorage.setItem('occentra_snapscan_token',saved.token);
-   window.location.assign(payment.url);
-   return;
-  }
-  if(!response.ok||!payment.url||!payment.fields)throw new Error(payment.error||'Checkout unavailable');
-  const form=document.createElement('form');form.method='POST';form.action=payment.url;
-  Object.entries(payment.fields as Record<string,string>).forEach(([name,value])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input)});
-  document.body.appendChild(form);form.submit();
+  if(!response.ok||!payment.url)throw new Error(payment.error||'SnapScan checkout unavailable');
+  sessionStorage.setItem('occentra_snapscan_token',saved.token);
+  window.location.assign(payment.url);
  }catch(e){setNotice(e instanceof Error?e.message:'Unable to start checkout');setCheckingOut(false)}
 }
 
@@ -130,5 +123,5 @@ return <div className="letters-site">
 <h3>Letter paragraphs</h3>{letter.paragraphs.map((p,i)=><label key={i}>Paragraph {i+1}<textarea rows={Math.max(3,Math.ceil(p.length/75))} value={p} onChange={e=>updateParagraph(i,e.target.value)}/></label>)}
 <button type="button" className="letter-add" onClick={addParagraph}>+ Add paragraph</button>
 <label>Closing<input value={letter.closing} onChange={e=>update('closing',e.target.value)}/></label>
-<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : <><button type="button" disabled={checkingOut} onClick={()=>pay('payfast')}>{checkingOut?'Opening checkout…':'Pay R15 · Payfast'}</button>{snapscanAvailable&&<button type="button" disabled={checkingOut} onClick={()=>pay('snapscan')}>{checkingOut?'Opening checkout…':'Pay R15 · SnapScan'}</button>}</>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
+<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : <button type="button" disabled={checkingOut||!snapscanAvailable} onClick={pay}>{checkingOut?'Opening SnapScan…':snapscanAvailable?'Pay R15 · SnapScan':'SnapScan checkout temporarily unavailable'}</button>}{!paid&&!snapscanAvailable&&<p className="letters-note">We are finishing our secure SnapScan connection. Please check back soon to purchase.</p>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
 </section></div></main></div>}

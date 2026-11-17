@@ -34,10 +34,10 @@ export async function POST(request: Request) {
       const { data: order, error: orderError } = await db.from('purchases')
         .select('template_id').eq('merchant_reference', reference).maybeSingle();
       if (orderError) throw orderError;
-      // Receipt recovery is an entitlement to one R15 cover-letter template,
-      // not a way to read the original private draft or unlock other products.
-      if (!order || !/^cover-(classic|navy|sage|executive)$/.test(order.template_id)) {
-        return respond({ error: 'This receipt is not for a cover letter' }, 400);
+      // A verified receipt restores entitlement to its purchased template,
+      // never to a private CV or cover-letter draft containing personal data.
+      if (!order || !/^(cv-[0-5]|cover-(classic|navy|sage|executive))$/.test(order.template_id)) {
+        return respond({ error: 'This receipt is not for an available template' }, 400);
       }
       return respond({ paid: true, found: true, templateId: order.template_id });
     }

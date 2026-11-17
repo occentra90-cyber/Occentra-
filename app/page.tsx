@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { designs, groups, price, type Design, type Category } from '../lib/catalog';
+import { selectSnapscanOrder } from '../lib/snapscan-order';
 
 type Fields = {
   name: string;
@@ -54,8 +55,13 @@ const defaults: Fields = {
 
 function privateDesignToken() {
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('design') || (params.get('provider') === 'snapscan' ? sessionStorage.getItem('occentra_snapscan_token') : null);
-  if (token && !params.has('design') && /^[a-f0-9]{64}$/.test(token)) {
+  let savedToken: string | null = null;
+  if (params.get('provider') === 'snapscan' || params.has('o')) {
+    try { savedToken = localStorage.getItem('occentra_snapscan_cv_token') || sessionStorage.getItem('occentra_snapscan_token'); }
+    catch { /* storage may be blocked in a payment-app browser */ }
+  }
+  const token = params.get('design') || savedToken;
+  if (token && !params.has('design') && !params.has('o') && /^[a-f0-9]{64}$/.test(token)) {
     // Restore the private link locally. Do not share this bearer token with the payment provider.
     params.set('design', token);
     window.history.replaceState({}, '', window.location.pathname + '?' + params.toString());
@@ -253,6 +259,12 @@ export default function Home() {
   const [guestExpiry, setGuestExpiry] = useState('');
   const [guestLocked, setGuestLocked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeCvOrder, setActiveCvOrder] = useState('');
+  const [receiptOrder, setReceiptOrder] = useState('');
+  const [verifyingCv, setVerifyingCv] = useState(false);
+  const [recoveredPaidCopy, setRecoveredPaidCopy] = useState(false);
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
+  const paidReceiptRef = useRef(false);
 
   useEffect(() => {
     fetch('/api/snapscan/config', { cache: 'no-store' })
@@ -262,7 +274,19 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    let storedOrder = '';
+    try { storedOrder = localStorage.getItem('occentra_snapscan_cv_order') || ''; } catch {}
+    const reference = selectSnapscanOrder({ returned: new URLSearchParams(window.location.search).get('o'), stored: storedOrder });
+    if (reference) setActiveCvOrder(reference);
+  }, []);
+
+  useEffect(() => {
     const token = privateDesignToken();
+    // A returned order is authoritative; wait for its authenticated payment
+    // reconciliation before restoring any possibly stale browser design token.
+    let savedOrder = '';
+    try { savedOrder = localStorage.getItem('occentra_snapscan_cv_order') || ''; } catch {}
+    if (selectSnapscanOrder({ returned: new URLSearchParams(window.location.search).get('o'), stored: savedOrder })) return;
     if (!token) return;
     fetch('/api/guest/design?token=' + encodeURIComponent(token), { cache: 'no-store' })
       .then(async response => {
@@ -289,7 +313,7 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = privateDesignToken();
-    if (!token || params.get('payment') !== 'returned') return;
+    if (activeCvOrder || params.has('o') || !token || params.get('payment') !== 'returned') return;
     const endpoint = params.get('provider') === 'snapscan' ? '/api/snapscan/status' : '/api/payfast/status';
     let active = true;
     let attempts = 0;
@@ -311,10 +335,148 @@ export default function Home() {
     };
     void check();
     return () => { active = false; };
-  }, []);
+  }, [activeCvOrder]);
+
+  useEffect(() => {
+    if (!activeCvOrder) return;
+    // A fresh checkout replaces any verification loop for an older order.
+    // This is independent of whether SnapScan redirects the payment app back.
+    paidReceiptRef.current = false;
+    setReceiptOrder(activeCvOrder);
+    setVerifyingCv(true);
+    setNotice('Checking this exact SnapScan order. Please do not pay again.');
+    let active = true;
+    let inFlight = false;
+    let attempts = 0;
+    let timer: number | undefined;
+
+    const check = async () => {
+      if (!active || paidReceiptRef.current || inFlight || document.visibilityState === 'hidden') return;
+      inFlight = true;
+      try {
+        const response = await fetch('/api/snapscan/recover', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reference: activeCvOrder }),
+        });
+        const result = await response.json();
+        if (!active || paidReceiptRef.current) return;
+
+        if (response.ok && result.paid) {
+          const entry = designs.find(d => d.id === result.templateId && d.category === 'cv');
+          if (!entry) {
+            setVerifyingCv(false);
+            setNotice('This receipt is for a different product. Contact Occentra support with the order number.');
+            return;
+          }
+          // The order number proves only the paid template. Restore private CV
+          // details exclusively from the browser's original private token.
+          let originalRestored = false;
+          const token = privateDesignToken() || guestToken;
+          if (token && /^[a-f0-9]{64}$/.test(token)) {
+            try {
+              const savedResponse = await fetch('/api/guest/design?token=' + encodeURIComponent(token), { cache: 'no-store' });
+              const saved = await savedResponse.json();
+              const design = saved.design;
+              if (savedResponse.ok && design?.status === 'paid' && design.template_id === result.templateId) {
+                if (!active) return;
+                setFields({ ...defaults, ...design.fields });
+                setLiving(Boolean(design.settings?.living));
+                setMotion(design.settings?.motion !== false);
+                setSparkles(design.settings?.sparkles !== false);
+                setGuestToken(token);
+                setGuestExpiry(design.expires_at);
+                setRecoveredPaidCopy(false);
+                originalRestored = true;
+              }
+            } catch { /* the original draft is optional for receipt recovery */ }
+          }
+          if (!active) return;
+          if (!originalRestored) {
+            // A still-open editor may already hold the customer's fields.
+            // Keep them rather than replacing them with sample content.
+            if (selected?.id !== result.templateId) setFields(defaults);
+            setGuestToken('');
+            setRecoveredPaidCopy(true);
+          }
+          setSelected(entry);
+          setGuestLocked(true);
+          paidReceiptRef.current = true;
+          setVerifyingCv(false);
+          setNotice(originalRestored
+            ? 'Payment verified. Your saved CV is unlocked and ready to download.'
+            : 'Payment verified. This browser did not retain your original details. You can edit this paid CV copy and download it without paying again.');
+          return;
+        }
+        if (response.ok && result.found === false) {
+          setVerifyingCv(false);
+          setNotice('This order was not found in Occentra. Check the complete Order Number on your SnapScan receipt.');
+          return;
+        }
+        if (!response.ok && response.status >= 400 && response.status < 500) {
+          setVerifyingCv(false);
+          setNotice(result.error || 'Unable to verify this receipt.');
+          return;
+        }
+      } catch { /* retry temporary network errors */ }
+      finally { inFlight = false; }
+      if (!active || paidReceiptRef.current) return;
+      if (++attempts < 48) timer = window.setTimeout(check, attempts < 16 ? 2500 : 6000);
+      else {
+        setVerifyingCv(false);
+        setNotice('Verification is still pending. Do not pay again. Use the receipt form or contact Occentra with this order number.');
+      }
+    };
+    const onReturn = () => {
+      if (!active || paidReceiptRef.current || inFlight || document.visibilityState === 'hidden') return;
+      if (timer) clearTimeout(timer);
+      timer = window.setTimeout(check, 0);
+    };
+    window.addEventListener('pageshow', onReturn);
+    document.addEventListener('visibilitychange', onReturn);
+    void check();
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('pageshow', onReturn);
+      document.removeEventListener('visibilitychange', onReturn);
+    };
+  }, [activeCvOrder, verificationAttempt]);
+
+  function verifyCvReceipt() {
+    const reference = selectSnapscanOrder({ checkout: receiptOrder });
+    if (!reference) {
+      setNotice('Enter the complete Order Number from your SnapScan receipt.');
+      return;
+    }
+    try { localStorage.setItem('occentra_snapscan_cv_order', reference); } catch {}
+    setActiveCvOrder(reference);
+    setVerificationAttempt(n => n + 1);
+  }
+
+  function startSeparateCvPurchase() {
+    if (!window.confirm('Only make a new payment if the previous one was NOT charged. If you already paid, verify its receipt first. Start a separate purchase?')) return;
+    try {
+      localStorage.removeItem('occentra_snapscan_cv_order');
+      localStorage.removeItem('occentra_snapscan_cv_token');
+      sessionStorage.removeItem('occentra_snapscan_token');
+    } catch {}
+    paidReceiptRef.current = true;
+    setActiveCvOrder('');
+    setReceiptOrder('');
+    setVerifyingCv(false);
+    setGuestToken('');
+    setGuestLocked(false);
+    setRecoveredPaidCopy(false);
+    window.history.replaceState({}, '', '/');
+    setNotice('Ready for a separate CV checkout. No payment has been made.');
+  }
 
   async function startSnapscanCheckout() {
     if (!selected || selected.category !== 'cv' || guestLocked || checkingOut || !snapscanAvailable) return;
+    if (activeCvOrder) {
+      setNotice('An earlier CV order is still being checked. Do not pay again; verify its receipt first.');
+      return;
+    }
     setCheckingOut(true);
     setNotice('');
     try {
@@ -323,11 +485,19 @@ export default function Home() {
       const saved = await savedResponse.json();
       if (!savedResponse.ok || !saved.token) throw new Error('Could not save your design');
       const response = await fetch('/api/snapscan/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designId: selected.id, token: saved.token }) });
+        body: JSON.stringify({ designId: selected.id, token: saved.token, returnOrigin: window.location.origin }) });
       const payment = await response.json();
-      if (!response.ok || !payment.url) throw new Error(payment.error || 'SnapScan checkout is unavailable');
+      const reference = selectSnapscanOrder({ checkout: payment.reference });
+      if (!response.ok || !payment.url || !reference) throw new Error(payment.error || 'SnapScan checkout is unavailable');
       setGuestToken(saved.token);
-      sessionStorage.setItem('occentra_snapscan_token', saved.token);
+      try {
+        sessionStorage.setItem('occentra_snapscan_token', saved.token);
+        localStorage.setItem('occentra_snapscan_cv_token', saved.token);
+        localStorage.setItem('occentra_snapscan_cv_order', reference);
+      } catch { /* the return URL still carries the order reference */ }
+      paidReceiptRef.current = false;
+      setActiveCvOrder(reference);
+      setReceiptOrder(reference);
       window.location.assign(payment.url);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'SnapScan checkout is unavailable');
@@ -390,6 +560,31 @@ export default function Home() {
           <a href="/cover-letters" style={{padding:'10px 14px',display:'inline-block',color:'inherit',textDecoration:'none'}}>Cover Letters</a>
         </nav>
       </header>
+
+      {!chosen && !activeCvOrder && (
+        <details style={{ maxWidth: 760, margin: '16px auto', padding: '12px 20px', background: '#fff8e9', borderRadius: 8 }}>
+          <summary>Already paid for a CV but no download? Verify your SnapScan receipt</summary>
+          <p>This checks an existing payment. It does not charge you again.</p>
+          <label>SnapScan Order Number
+            <input type="text" value={receiptOrder} onChange={e => setReceiptOrder(e.target.value)} autoComplete="off" spellCheck={false} />
+          </label>
+          <button type="button" onClick={verifyCvReceipt}>Verify paid CV receipt</button>
+          {notice && <p role="status">{notice}</p>}
+        </details>
+      )}
+
+      {!chosen && activeCvOrder && (
+        <section role="status" style={{ maxWidth: 760, margin: '22px auto', padding: 22, background: '#fff8e9', border: '1px solid #c8aa76', borderRadius: 8 }}>
+          <h2>Checking your SnapScan CV payment</h2>
+          <p>{notice || 'We are checking the order you already started. Please do not pay again.'}</p>
+          <p>Occentra order: <code style={{ overflowWrap: 'anywhere' }}>{activeCvOrder}</code></p>
+          {!verifyingCv && <button type="button" onClick={() => setVerificationAttempt(n => n + 1)}>Check this payment again (no charge)</button>}
+          <label style={{ display: 'block', marginTop: 12 }}>Or enter the Order Number on your SnapScan receipt:
+            <input type="text" value={receiptOrder} onChange={e => setReceiptOrder(e.target.value)} autoComplete="off" spellCheck={false} />
+          </label>
+          <button type="button" onClick={verifyCvReceipt}>Verify receipt without paying again</button>
+        </section>
+      )}
 
       {!chosen ? (
         <>
@@ -609,7 +804,7 @@ export default function Home() {
             </div>
 
             <div className="editor">
-              <fieldset disabled={guestLocked} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              <fieldset disabled={guestLocked && !recoveredPaidCopy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
               {chosen.category === 'cv' ? (
                 <>
                   <label>
@@ -703,10 +898,31 @@ export default function Home() {
 
               </fieldset>
               {guestLocked && chosen.category === 'cv' && <button type="button" className="goldbtn" onClick={() => window.print()}>Download CV as PDF</button>}
-              {chosen.category === 'cv' && !guestLocked && (
+              {chosen.category === 'cv' && !guestLocked && activeCvOrder && (
+                <button type="button" className="goldbtn" disabled={verifyingCv} onClick={() => setVerificationAttempt(n => n + 1)}>
+                  {verifyingCv ? 'Checking this SnapScan payment…' : 'Check existing SnapScan payment'}
+                </button>
+              )}
+              {chosen.category === 'cv' && !guestLocked && !activeCvOrder && (
                 <button type="button" className="goldbtn" onClick={startSnapscanCheckout} disabled={checkingOut || !snapscanAvailable}>
                   {checkingOut ? 'Opening SnapScan…' : snapscanAvailable ? 'Pay R20 · SnapScan' : 'SnapScan checkout temporarily unavailable'}
                 </button>
+              )}
+              {chosen.category === 'cv' && !guestLocked && activeCvOrder && (
+                <button type="button" onClick={startSeparateCvPurchase}>Start a separate purchase (only if not charged)</button>
+              )}
+              {chosen.category === 'cv' && !guestLocked && (
+                <details>
+                  <summary>Already paid but no CV download? Verify your receipt</summary>
+                  <label>SnapScan Order Number
+                    <input type="text" value={receiptOrder} onChange={e => setReceiptOrder(e.target.value)}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autoComplete="off" spellCheck={false} />
+                  </label>
+                  <button type="button" onClick={verifyCvReceipt}>Verify paid CV receipt (no new charge)</button>
+                </details>
+              )}
+              {chosen.category === 'cv' && !guestLocked && activeCvOrder && (
+                <p>Current Occentra order: <code style={{ overflowWrap: 'anywhere' }}>{activeCvOrder}</code></p>
               )}
               {chosen.category === 'cv' && !guestLocked && !snapscanAvailable && (
                 <p>We are finishing our secure SnapScan connection. Please check back soon to purchase your CV.</p>

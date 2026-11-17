@@ -52,6 +52,17 @@ const defaults: Fields = {
   phone: '071 000 0000',
 };
 
+function privateDesignToken() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('design') || (params.get('provider') === 'snapscan' ? sessionStorage.getItem('occentra_snapscan_token') : null);
+  if (token && !params.has('design') && /^[a-f0-9]{64}$/.test(token)) {
+    // Restore the private link locally. Do not share this bearer token with the payment provider.
+    params.set('design', token);
+    window.history.replaceState({}, '', window.location.pathname + '?' + params.toString());
+  }
+  return token;
+}
+
 function CVPreview({ layout, fields, mini = false }: { layout?: string; fields: Fields; mini?: boolean }) {
   const skillList = fields.skills.split('\n').filter(Boolean);
   const expList = fields.experience.split('\n').filter(Boolean);
@@ -237,13 +248,21 @@ export default function Home() {
   const [notice, setNotice] = useState('');
 
   const [checkingOut, setCheckingOut] = useState(false);
+  const [snapscanAvailable, setSnapscanAvailable] = useState(false);
   const [guestToken, setGuestToken] = useState('');
   const [guestExpiry, setGuestExpiry] = useState('');
   const [guestLocked, setGuestLocked] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get('design');
+    fetch('/api/snapscan/config', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : { available: false })
+      .then(data => setSnapscanAvailable(data.available === true))
+      .catch(() => setSnapscanAvailable(false));
+  }, []);
+
+  useEffect(() => {
+    const token = privateDesignToken();
     if (!token) return;
     fetch('/api/guest/design?token=' + encodeURIComponent(token), { cache: 'no-store' })
       .then(async response => {
@@ -269,15 +288,16 @@ export default function Home() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('design');
+    const token = privateDesignToken();
     if (!token || params.get('payment') !== 'returned') return;
+    const endpoint = params.get('provider') === 'snapscan' ? '/api/snapscan/status' : '/api/payfast/status';
     let active = true;
     let attempts = 0;
     setNotice('Checking your payment confirmation. Please wait; do not pay again.');
     const check = async () => {
       if (!active) return;
       try {
-        const response = await fetch('/api/payfast/status?token=' + encodeURIComponent(token), { cache: 'no-store' });
+        const response = await fetch(endpoint + '?token=' + encodeURIComponent(token), { cache: 'no-store' });
         const result = await response.json();
         if (result.paid) {
           setGuestLocked(true);
@@ -293,36 +313,24 @@ export default function Home() {
     return () => { active = false; };
   }, []);
 
-  async function startPayfastCheckout() {
-    if (!selected || selected.category !== 'cv' || guestLocked) return;
+  async function startSnapscanCheckout() {
+    if (!selected || selected.category !== 'cv' || guestLocked || checkingOut || !snapscanAvailable) return;
     setCheckingOut(true);
     setNotice('');
     try {
-      const savedResponse = await fetch('/api/guest/design', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templateId: selected.id, fields, settings: { living, motion, sparkles } }) });
+      const savedResponse = await fetch('/api/guest/design', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: selected.id, fields, settings: { living, motion, sparkles } }) });
       const saved = await savedResponse.json();
-      if (!savedResponse.ok || !saved.token) throw new Error('Could not prepare your design');
+      if (!savedResponse.ok || !saved.token) throw new Error('Could not save your design');
+      const response = await fetch('/api/snapscan/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designId: selected.id, token: saved.token }) });
+      const payment = await response.json();
+      if (!response.ok || !payment.url) throw new Error(payment.error || 'SnapScan checkout is unavailable');
       setGuestToken(saved.token);
-      const response = await fetch('/api/payfast/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designId: selected.id, token: saved.token }),
-      });
-      if (!response.ok) throw new Error('Unable to start Payfast checkout');
-      const { url, fields: paymentFields } = await response.json();
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = url;
-      Object.entries(paymentFields as Record<string, string>).forEach(([name, value]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
-      });
-      document.body.appendChild(form);
-      form.submit();
-    } catch {
-      setNotice('Payfast checkout could not start. Please try again.');
+      sessionStorage.setItem('occentra_snapscan_token', saved.token);
+      window.location.assign(payment.url);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'SnapScan checkout is unavailable');
       setCheckingOut(false);
     }
   }
@@ -695,13 +703,14 @@ export default function Home() {
 
               </fieldset>
               {guestLocked && chosen.category === 'cv' && <button type="button" className="goldbtn" onClick={() => window.print()}>Download CV as PDF</button>}
-              <button
-                className="goldbtn"
-                onClick={chosen.category === 'cv' ? startPayfastCheckout : () => setNotice('Checkout is not available for this category.')}
-                disabled={checkingOut || guestLocked}
-              >
-                {checkingOut ? 'Opening Payfast…' : 'Pay R20 · Payfast'}
-              </button>
+              {chosen.category === 'cv' && !guestLocked && (
+                <button type="button" className="goldbtn" onClick={startSnapscanCheckout} disabled={checkingOut || !snapscanAvailable}>
+                  {checkingOut ? 'Opening SnapScan…' : snapscanAvailable ? 'Pay R20 · SnapScan' : 'SnapScan checkout temporarily unavailable'}
+                </button>
+              )}
+              {chosen.category === 'cv' && !guestLocked && !snapscanAvailable && (
+                <p>We are finishing our secure SnapScan connection. Please check back soon to purchase your CV.</p>
+              )}
               {guestLocked && <p>Payment verified. Download your CV as many times as you need while this page is open.</p>}
               {notice && (
                 <p className="notice" role="status">

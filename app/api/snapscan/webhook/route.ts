@@ -24,8 +24,10 @@ export async function POST(request: Request) {
     }
     const payloadText = new URLSearchParams(rawBody).get('payload');
     if (!payloadText) return new NextResponse('Missing payment payload', { status: 400 });
-    const payload: unknown = JSON.parse(payloadText);
-    if (!payload || typeof payload !== 'object') return new NextResponse('Invalid payment payload', { status: 400 });
+    let payload: unknown;
+    try { payload = JSON.parse(payloadText); }
+    catch { return new NextResponse('Invalid payment JSON', { status: 400 }); }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return new NextResponse('Invalid payment payload', { status: 400 });
     const payment = payload as Record<string, unknown>;
     console.info('SnapScan trace', {
       event: 'webhook_received',

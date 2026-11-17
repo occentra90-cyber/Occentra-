@@ -1,3 +1,4 @@
+import { describeSnapscanFailure } from '../../../../lib/snapscan-errors';
 import { NextResponse } from 'next/server';
 import { isAuthenticSnapscanWebhook, snapscanVerificationConfigured } from '../../../../lib/snapscan';
 import { reconcileSnapscanPayment } from '../../../../lib/snapscan-reconcile';
@@ -37,6 +38,10 @@ export async function POST(request: Request) {
     // Ignore unsuccessful payments. Only an independently verified completed
     // transaction may unlock the saved design.
     if (payment.status !== 'completed') return new NextResponse('Notification received', { status: 200 });
+    if (payment.transactionType === 'refund') {
+      console.warn('SnapScan trace', { event: 'refund_notification', reference: typeof payment.merchantReference === 'string' ? payment.merchantReference : null });
+      return new NextResponse('Refund noted', { status: 200 });
+    }
     if (typeof payment.merchantReference !== 'string' ||
         !/^[a-f0-9-]{36}$/i.test(payment.merchantReference) ||
         typeof payment.id !== 'number' || !Number.isSafeInteger(payment.id) || payment.id <= 0) {
@@ -47,8 +52,9 @@ export async function POST(request: Request) {
     return new NextResponse(status === 'pending' ? 'Verification pending' : 'Notification confirmed',
       { status: status === 'pending' ? 503 : 200 });
   } catch (error) {
-    // SnapScan retries non-200 responses for transient failures.
-    console.error('SnapScan trace', { event: 'webhook_verification_failed', category: error instanceof Error ? error.name : 'unknown' });
+    const failure = describeSnapscanFailure(error);
+    console.error('SnapScan trace', { event: 'webhook_verification_failed', ...failure.log });
+    if (!failure.failure.retryable) return new NextResponse('Notification acknowledged; needs review', { status: 200 });
     return new NextResponse('Verification temporarily unavailable', { status: 503 });
   }
 }

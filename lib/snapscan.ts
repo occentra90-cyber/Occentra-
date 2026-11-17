@@ -31,7 +31,8 @@ export function createSnapscanPaymentUrl(reference: string, amountCents: number,
   url.searchParams.set('strict', 'true');
   // SnapScan limits SnapCode URLs to 256 characters. A single fallback return
   // works for both outcomes; we independently verify payment after returning.
-  url.searchParams.set('r_url', base + (base.includes('?') ? '&' : '?') + 'payment=returned&provider=snapscan');
+  const carriesOrder = /[?&]o=[a-f0-9-]{36}(&|$)/i.test(returnPath);
+  url.searchParams.set('r_url', carriesOrder ? base : base + (base.includes('?') ? '&' : '?') + 'payment=returned&provider=snapscan');
   const checkoutUrl = url.toString();
   if (checkoutUrl.length > 256) throw new Error('SnapScan checkout URL is too long');
   return checkoutUrl;
@@ -44,13 +45,16 @@ export type SnapscanPayment = {
   requiredAmount: number | null;
   merchantReference: string | null;
   transactionType: string;
+  tipAmount?: number | null;
 };
 
 export function isMatchingSnapscanPayment(payment: SnapscanPayment, reference: string, amountCents: number) {
+  const tip = payment.tipAmount ?? 0;
   return Number.isSafeInteger(payment.id) && payment.id > 0 &&
     payment.status === 'completed' && payment.transactionType === 'payment' &&
-    payment.merchantReference === reference &&
-    payment.totalAmount === amountCents && payment.requiredAmount === amountCents;
+    payment.merchantReference === reference && payment.requiredAmount === amountCents &&
+    Number.isSafeInteger(payment.totalAmount) && Number.isSafeInteger(tip) && tip >= 0 &&
+    payment.totalAmount - tip >= amountCents;
 }
 
 /** SnapScan signs the original, URL-encoded request body, not the parsed payload. */

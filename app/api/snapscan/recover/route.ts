@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { reconcileSnapscanPayment } from '../../../../lib/snapscan-reconcile';
 import { snapscanVerificationConfigured } from '../../../../lib/snapscan';
 
@@ -27,7 +28,20 @@ export async function POST(request: Request) {
     }
     const result = await reconcileSnapscanPayment(reference);
     console.info('SnapScan receipt reconciliation:', result, reference.slice(-6));
-    return respond({ paid: result === 'paid', found: result !== 'unknown' });
+    if (result === 'paid') {
+      const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false, autoRefreshToken: false } });
+      const { data: order, error: orderError } = await db.from('purchases')
+        .select('template_id').eq('merchant_reference', reference).maybeSingle();
+      if (orderError) throw orderError;
+      // Receipt recovery is an entitlement to one R15 cover-letter template,
+      // not a way to read the original private draft or unlock other products.
+      if (!order || !/^cover-(classic|navy|sage|executive)$/.test(order.template_id)) {
+        return respond({ error: 'This receipt is not for a cover letter' }, 400);
+      }
+      return respond({ paid: true, found: true, templateId: order.template_id });
+    }
+    return respond({ paid: false, found: result !== 'unknown' });
   } catch (error) {
     // Supabase returns structured errors which are not Error instances.
     // Log only the diagnostic code/category; never credentials or private tokens.

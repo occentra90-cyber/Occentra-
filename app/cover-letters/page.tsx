@@ -67,7 +67,9 @@ useEffect(()=>{
  // A SnapScan return may open in an isolated browser context without the
  // session/local storage used by the original checkout. The merchant order
  // reference is in the return URL, so confirm it server-side automatically.
- const reference=new URLSearchParams(window.location.search).get('o')?.trim().toLowerCase()||'';
+ let storedOrder='';
+ try{storedOrder=localStorage.getItem('occentra_snapscan_order')||''}catch{}
+ const reference=(new URLSearchParams(window.location.search).get('o')||storedOrder).trim().toLowerCase();
  if(!/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(reference))return;
  setReceiptOrder(reference);
  setVerifyingReturn(true);
@@ -117,6 +119,7 @@ useEffect(()=>{
  // The return-order checker above already reconciles this payment and restores
  // the saved design when possible; avoid competing status polls for old tokens.
  if(query.has('o'))return;
+ try{if(localStorage.getItem('occentra_snapscan_order'))return}catch{}
  // A user may navigate back manually instead of following SnapScan's return link.
  // Recover their private token locally and check their existing payment automatically.
  let storedSnapscanToken='';
@@ -189,8 +192,13 @@ async function pay(){
   setPaymentToken(saved.token);
   const response=await fetch('/api/snapscan/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({designId:'cover-'+template.id,token:saved.token,returnOrigin:window.location.origin})});
   const payment=await response.json();
-  if(!response.ok||!payment.url)throw new Error(payment.error||'SnapScan checkout unavailable');
-  try{sessionStorage.setItem('occentra_snapscan_token',saved.token);localStorage.setItem('occentra_snapscan_token',saved.token)}catch{}
+  if(!response.ok||!payment.url||typeof payment.reference!=='string'||
+   !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(payment.reference))throw new Error(payment.error||'SnapScan checkout unavailable');
+  try{
+   sessionStorage.setItem('occentra_snapscan_token',saved.token);
+   localStorage.setItem('occentra_snapscan_token',saved.token);
+   localStorage.setItem('occentra_snapscan_order',payment.reference);
+  }catch{}
   window.location.assign(payment.url);
  }catch(e){setNotice(e instanceof Error?e.message:'Unable to start checkout');setCheckingOut(false)}
 }
@@ -212,6 +220,7 @@ async function verifyReceipt(){
    // The browser may still hold the private token of a later, unpaid checkout.
    // The receipt grants a freshly editable paid copy without exposing private
    // contents of the original saved design or requiring a second payment.
+   try{localStorage.setItem('occentra_snapscan_order',reference)}catch{}
    paidReceiptRef.current=true;setActive(index);setEditing(true);setPaid(true);
    setNotice('R15 payment confirmed! You can now edit and download your paid cover letter. Check the text before saving the PDF.');
   }else setNotice(result.found
@@ -219,6 +228,24 @@ async function verifyReceipt(){
    : 'We could not find this order number in Occentra. Check the number on your SnapScan receipt.');
  }catch(e){setNotice(e instanceof Error?e.message:'Unable to check the receipt right now.')}
  finally{setRecovering(false)}
+}
+
+function startNewPurchase(){
+ const message=paid
+  ? 'Save your paid PDF first. Start a separate cover letter purchase?'
+  : 'Only start a new checkout if your previous payment was NOT charged. If you paid already, use the receipt recovery option. Start a new checkout?';
+ if(!window.confirm(message))return;
+ // Never erase the actual purchase or saved draft from the server. This only
+ // removes the browser's old checkout pointer so a new purchase can start.
+ try{
+  sessionStorage.removeItem('occentra_snapscan_token');
+  localStorage.removeItem('occentra_snapscan_token');
+  localStorage.removeItem('occentra_snapscan_order');
+ }catch{}
+ paidReceiptRef.current=true; // Stop the old checkout's scheduled status checks.
+ setPaymentToken('');setReceiptOrder('');setVerifyingReturn(false);
+ setPaid(false);setNotice('Ready for a separate checkout. This has not made a payment.');
+ window.history.replaceState({},'','/cover-letters?template='+template.id);
 }
 
 const update=(key:keyof Letter,value:string)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,[key]:value}:d));
@@ -236,7 +263,7 @@ return <div className="letters-site">
 <h3>Letter paragraphs</h3>{letter.paragraphs.map((p,i)=><label key={i}>Paragraph {i+1}<textarea rows={Math.max(3,Math.ceil(p.length/75))} value={p} onChange={e=>updateParagraph(i,e.target.value)}/></label>)}
 <button type="button" className="letter-add" onClick={addParagraph}>+ Add paragraph</button>
 <label>Closing<input value={letter.closing} onChange={e=>update('closing',e.target.value)}/></label>
-<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : verifyingReturn ? <button type="button" disabled>Checking your SnapScan payment…</button> : paymentToken ? <button type="button" onClick={()=>window.location.reload()}>Check existing SnapScan payment</button> : <button type="button" disabled={checkingOut||!snapscanAvailable} onClick={pay}>{checkingOut?'Opening SnapScan…':snapscanAvailable?'Pay R15 · SnapScan':'SnapScan checkout temporarily unavailable'}</button>}{!paid&&!snapscanAvailable&&!verifyingReturn&&<p className="letters-note">We are finishing our secure SnapScan connection. Please check back soon to purchase.</p>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
+<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : verifyingReturn ? <button type="button" disabled>Checking your SnapScan payment…</button> : paymentToken ? <button type="button" onClick={()=>window.location.reload()}>Check existing SnapScan payment</button> : <button type="button" disabled={checkingOut||!snapscanAvailable} onClick={pay}>{checkingOut?'Opening SnapScan…':snapscanAvailable?'Pay R15 · SnapScan':'SnapScan checkout temporarily unavailable'}</button>}{(paid||verifyingReturn||paymentToken)&&<button type="button" className="letters-secondary" onClick={startNewPurchase}>{paid?'Create another cover letter':'Start a separate checkout (only if not charged)'}</button>}{!paid&&!snapscanAvailable&&!verifyingReturn&&<p className="letters-note">We are finishing our secure SnapScan connection. Please check back soon to purchase.</p>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
 {!paid&&<details className="letters-payment">
  <summary>Already paid but no download? Check your receipt</summary>
  <label htmlFor="snapscan-receipt-order">Already paid? Enter the Order Number on your SnapScan receipt.

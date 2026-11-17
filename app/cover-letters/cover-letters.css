@@ -18,4 +18,5 @@
 .letters-payment{border-top:1px solid #e5e0d8;margin-top:24px;padding-top:20px}
 .letters-payment button{display:block;width:100%;background:#a7814f;color:#fff;border:0;border-radius:6px;padding:15px;font-weight:700;cursor:pointer}
 .letters-payment button:disabled{opacity:.65;cursor:wait}
+.letters-payment summary{cursor:pointer;font-weight:700;color:#8f6b3e;margin-bottom:16px}
 @media print{.letters-payment{display:none!important}}

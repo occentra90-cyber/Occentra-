@@ -22,7 +22,19 @@ test('cover-letter QR also fits the SnapScan 256-character limit', () => {
   assert.equal(url.searchParams.get('r_url'), 'https://occentra-occentra.vercel.app/cover-letters?template=executive&payment=returned&provider=snapscan');
 });
 
-test('return URL stays on the customer's trusted Occentra domain', () => {
+test('returning a cover-letter buyer carries only the order reference across browser contexts', () => {
+  const reference = 'a0579bfd-9f56-4f86-a71e-1e9ee37e5fbd';
+  for (const origin of ['https://occentra.vercel.app', 'https://occentra-occentra.vercel.app']) {
+    const url = new URL(createSnapscanPaymentUrl(reference, 1500, '/cover-letters?o=' + reference, origin));
+    assert.ok(url.toString().length <= 256);
+    const returnUrl = new URL(url.searchParams.get('r_url')!);
+    assert.equal(returnUrl.searchParams.get('o'), reference);
+    assert.equal(returnUrl.searchParams.get('provider'), 'snapscan');
+    assert.equal(returnUrl.searchParams.has('design'), false);
+  }
+});
+
+test('return URL stays on the customer\'s trusted Occentra domain', () => {
   const url = new URL(createSnapscanPaymentUrl('order-123', 1500, '/cover-letters?template=sage', 'https://occentra.vercel.app'));
   assert.equal(url.searchParams.get('r_url'), 'https://occentra.vercel.app/cover-letters?template=sage&payment=returned&provider=snapscan');
   assert.ok(url.toString().length <= 256);

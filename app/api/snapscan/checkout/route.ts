@@ -26,8 +26,11 @@ export async function POST(request: Request) {
     const amountCents = body.designId.startsWith('cover-') ? 1500 : 2000;
     const reference = randomUUID();
     // Validate the merchant URL before creating an order. Do not accept an amount or redirect from the browser.
+    // The returned browser might not share storage with the checkout tab.
+    // Carry the random merchant order reference (already sent to SnapScan) so
+    // the cover-letter page can reconcile paid orders automatically on return.
     const returnPath = body.designId.startsWith('cover-')
-      ? '/cover-letters?template=' + body.designId.slice('cover-'.length) : '/';
+      ? '/cover-letters?o=' + reference : '/';
     const paymentUrl = createSnapscanPaymentUrl(reference, amountCents, returnPath, body.returnOrigin);
     const { data: purchase, error: purchaseError } = await db.from('purchases').insert({
       merchant_reference: reference, template_id: design.template_id, amount_cents: amountCents,

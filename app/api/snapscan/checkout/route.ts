@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     // Carry the random merchant order reference (already sent to SnapScan) so
     // the cover-letter page can reconcile paid orders automatically on return.
     const returnPath = body.designId.startsWith('cover-')
-      ? '/cover-letters?o=' + reference : '/';
+      ? '/cover-letters?o=' + reference : '/?o=' + reference;
     const paymentUrl = createSnapscanPaymentUrl(reference, amountCents, returnPath, body.returnOrigin);
     const { data: purchase, error: purchaseError } = await db.from('purchases').insert({
       merchant_reference: reference, template_id: design.template_id, amount_cents: amountCents,

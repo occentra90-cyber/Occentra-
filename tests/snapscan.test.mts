@@ -45,7 +45,7 @@ test('returning a cover-letter buyer carries only the order reference across bro
     assert.ok(url.toString().length <= 256);
     const returnUrl = new URL(url.searchParams.get('r_url')!);
     assert.equal(returnUrl.searchParams.get('o'), reference);
-    assert.equal(returnUrl.searchParams.get('provider'), 'snapscan');
+    assert.equal(returnUrl.searchParams.get('provider'), null);
     assert.equal(returnUrl.searchParams.has('design'), false);
   }
 });
@@ -57,7 +57,7 @@ test('CV payment return carries the exact order on the same trusted domain', () 
     const returned = new URL(url.searchParams.get('r_url')!);
     assert.equal(returned.origin, origin);
     assert.equal(returned.searchParams.get('o'), reference);
-    assert.equal(returned.searchParams.get('provider'), 'snapscan');
+    assert.equal(returned.searchParams.get('provider'), null);
     assert.equal(returned.searchParams.has('design'), false);
     assert.ok(url.toString().length <= 256);
   }
@@ -75,6 +75,10 @@ test('recognises only exact completed payment, amount and merchant reference', (
     totalAmount: 2000, requiredAmount: 2000, transactionType: 'payment' };
   assert.equal(isMatchingSnapscanPayment(valid, 'order-123', 2000), true);
   assert.equal(isMatchingSnapscanPayment({ ...valid, totalAmount: 1500 }, 'order-123', 2000), false);
+  assert.equal(isMatchingSnapscanPayment({ ...valid, totalAmount: 2300, tipAmount: 300 }, 'order-123', 2000), true);
+  assert.equal(isMatchingSnapscanPayment({ ...valid, totalAmount: 2400 }, 'order-123', 2000), true);
+  assert.equal(isMatchingSnapscanPayment({ ...valid, totalAmount: 2200, tipAmount: 300 }, 'order-123', 2000), false);
+  assert.equal(isMatchingSnapscanPayment({ ...valid, totalAmount: 2300, tipAmount: -1 }, 'order-123', 2000), false);
   assert.equal(isMatchingSnapscanPayment({ ...valid, merchantReference: 'other' }, 'order-123', 2000), false);
   assert.equal(isMatchingSnapscanPayment({ ...valid, status: 'pending' }, 'order-123', 2000), false);
   assert.equal(isMatchingSnapscanPayment({ ...valid, transactionType: 'refund' }, 'order-123', 2000), false);

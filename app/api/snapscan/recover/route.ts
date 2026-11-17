@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       }
       return respond({ paid: true, found: true, templateId: order.template_id });
     }
-    return respond({ paid: result === 'paid', found: result !== 'unknown' });
+    return respond({ paid: false, found: result !== 'unknown' });
   } catch (error) {
     // Supabase returns structured errors which are not Error instances.
     // Log only the diagnostic code/category; never credentials or private tokens.

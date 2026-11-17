@@ -2,6 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHmac } from 'node:crypto';
 import { createSnapscanPaymentUrl, isMatchingSnapscanPayment, isAuthenticSnapscanWebhook } from '../lib/snapscan.ts';
+import { selectSnapscanOrder } from '../lib/snapscan-order.ts';
+
+test('a new checkout replaces an old pending order, including after return', () => {
+  const old = 'a02a0350-ddd8-4e5d-8ac6-58892cd80184';
+  const current = 'a0579bfd-9f56-4f86-a71e-1e9ee37e5fbd';
+  assert.equal(selectSnapscanOrder({checkout:current,returned:old,stored:old}),current);
+  assert.equal(selectSnapscanOrder({returned:current,stored:old}),current);
+  assert.equal(selectSnapscanOrder({stored:old}),old);
+});
+
+test('an invalid return order cannot mask a valid saved checkout', () => {
+  const saved = 'a0579bfd-9f56-4f86-a71e-1e9ee37e5fbd';
+  assert.equal(selectSnapscanOrder({returned:'not-an-order',stored:saved}),saved);
+  assert.equal(selectSnapscanOrder({checkout:'BAD',stored:saved}),saved);
+  assert.equal(selectSnapscanOrder({checkout:'invalid',returned:'',stored:'invalid'}),'');
+});
 
 test('builds a fixed-amount, strictly referenced QR URL without exposing a private token', () => {
   const url = new URL(createSnapscanPaymentUrl('order-123', 2000, '/'));

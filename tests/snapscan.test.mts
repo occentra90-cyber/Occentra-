@@ -3,6 +3,8 @@ import test from 'node:test';
 import { createHmac } from 'node:crypto';
 import { createSnapscanPaymentUrl, isMatchingSnapscanPayment, isAuthenticSnapscanWebhook } from '../lib/snapscan.ts';
 import { selectSnapscanOrder } from '../lib/snapscan-order.ts';
+import { fetchSnapscanPayments, reconcileWith } from '../lib/snapscan-reconcile-core.ts';
+import { SnapscanError, describeSnapscanFailure } from '../lib/snapscan-errors.ts';
 
 test('a new checkout replaces an old pending order, including after return', () => {
   const old = '11111111-1111-4111-8111-111111111111';
@@ -95,4 +97,19 @@ test('validates the exact URL-encoded webhook body with constant-time HMAC compa
   assert.equal(isAuthenticSnapscanWebhook(original, authorization, 'another-key'), false);
   assert.equal(isAuthenticSnapscanWebhook(original, 'SnapScan signature=invalid', key), false);
   assert.equal(isAuthenticSnapscanWebhook(original, null, key), false);
+});
+
+test('authenticated payment lookup handles API outages without treating them as unpaid', async () => {
+  await assert.rejects(
+    fetchSnapscanPayments('test','test',async () => new Response('',{status:503})),
+    (error) => error instanceof SnapscanError && error.code === 'upstream_unavailable'
+  );
+  await assert.rejects(
+    fetchSnapscanPayments('test','test',async () => new Response('not json',{status:200})),
+    (error) => error instanceof SnapscanError && error.code === 'upstream_bad_response'
+  );
+});
+test('payment failures distinguish retryable outages from permanent conflicts', () => {
+  assert.equal(describeSnapscanFailure(new SnapscanError('upstream_rate_limited')).status,503);
+  assert.equal(describeSnapscanFailure(new SnapscanError('payment_id_conflict')).status,409);
 });

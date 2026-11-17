@@ -113,3 +113,62 @@ test('payment failures distinguish retryable outages from permanent conflicts', 
   assert.equal(describeSnapscanFailure(new SnapscanError('upstream_rate_limited')).status,503);
   assert.equal(describeSnapscanFailure(new SnapscanError('payment_id_conflict')).status,409);
 });
+
+type TestRow = Record<string, unknown>;
+function fakePaymentDb(tables: {purchases:TestRow[];guest_designs:TestRow[]}) {
+  return {from:(table:'purchases'|'guest_designs')=>{
+    let patch:TestRow|null=null;const filters:[string,unknown][]=[];
+    const rows=()=>tables[table].filter(row=>filters.every(([key,value])=>row[key]===value));
+    const api:Record<string,unknown>={
+      select:()=>api,update:(value:TestRow)=>{patch=value;return api;},
+      eq:(key:string,value:unknown)=>{filters.push([key,value]);return api;},
+      maybeSingle:async()=>({data:rows()[0]?{...rows()[0]}:null,error:null}),
+      then:(resolve:(v:unknown)=>unknown)=>{if(patch)for(const row of rows())Object.assign(row,patch);return resolve({error:null});}
+    };return api;
+  }} as never;
+}
+function paymentScenario(options:{order?:TestRow;design?:TestRow|null}={}){
+  const ref='a0579bfd-9f56-4f86-a71e-1e9ee37e5fbd';
+  const purchases:TestRow[]=[{id:'p1',merchant_reference:ref,template_id:'cv-1',amount_cents:2000,currency:'ZAR',status:'pending',payment_provider:'snapscan',snapscan_payment_id:null,...options.order}];
+  const guest_designs:TestRow[]=options.design===null?[]:[{id:'d1',template_id:'cv-1',status:'draft',purchase_id:'p1',...options.design}];
+  let calls=0;
+  const paid=(over:TestRow={})=>({id:501,status:'completed',merchantReference:ref,requiredAmount:2000,totalAmount:2000,transactionType:'payment',...over});
+  return {purchases,guest_designs,paid,get calls(){return calls;},
+    run:(list:unknown[]|Error,notifiedId?:number)=>reconcileWith({db:fakePaymentDb({purchases,guest_designs}),lookup:async()=>{calls++;if(list instanceof Error)throw list;return list;}},ref,notifiedId)};
+}
+test('verified SnapScan payment records purchase and unlocks once',async()=>{
+  const s=paymentScenario();assert.equal(await s.run([s.paid()]),'paid');
+  assert.equal(s.purchases[0].snapscan_payment_id,'501');assert.equal(s.guest_designs[0].status,'paid');
+  assert.equal(await s.run([s.paid()]),'paid');assert.equal(s.calls,1);
+});
+test('tipped payment records and unlocks',async()=>{
+  const s=paymentScenario();assert.equal(await s.run([s.paid({totalAmount:2300,tipAmount:300})]),'paid');
+});
+test('unmatched or incomplete payment never unlocks',async()=>{
+  for(const over of [{status:'pending'},{merchantReference:'wrong'},{requiredAmount:1500},{totalAmount:1500},{transactionType:'refund'}]){
+    const s=paymentScenario();assert.equal(await s.run([s.paid(over)]),'pending');
+    assert.equal(s.purchases[0].status,'pending');assert.equal(s.guest_designs[0].status,'draft');
+  }
+});
+test('missing draft still records a verified payment',async()=>{
+  const s=paymentScenario({design:null});assert.equal(await s.run([s.paid()]),'paid');assert.equal(s.purchases[0].status,'paid');
+});
+test('interrupted purchase payment can finish unlocking',async()=>{
+  const s=paymentScenario({order:{status:'paid',snapscan_payment_id:'501'}});
+  assert.equal(await s.run([s.paid()]),'paid');assert.equal(s.guest_designs[0].status,'paid');
+});
+test('different payment ID and invalid order never unlock',async()=>{
+  const a=paymentScenario({order:{status:'paid',snapscan_payment_id:'123'}});
+  await assert.rejects(a.run([a.paid()]),(e)=>e instanceof SnapscanError&&e.code==='payment_id_conflict');
+  const b=paymentScenario({order:{amount_cents:1}});
+  await assert.rejects(b.run([b.paid()]),(e)=>e instanceof SnapscanError&&e.code==='order_mismatch');
+});
+test('SnapScan outage does not change pending purchase',async()=>{
+  const s=paymentScenario();await assert.rejects(s.run(new SnapscanError('upstream_unavailable')),(e)=>e instanceof SnapscanError&&e.retryable);
+  assert.equal(s.purchases[0].status,'pending');
+});
+test('unknown reference and legacy provider do not unlock',async()=>{
+  const s=paymentScenario();s.purchases.length=0;assert.equal(await s.run([s.paid()]),'unknown');
+  const legacy=paymentScenario({order:{payment_provider:'payfast'}});
+  assert.equal(await legacy.run([legacy.paid()]),'unknown');
+});

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { selectSnapscanOrder } from '../../lib/snapscan-order';
 import './cover-letters.css';
 
 type Letter = { name:string; city:string; phone:string; email:string; date:string; recipient:string; company:string; location:string; subject:string; greeting:string; paragraphs:string[]; closing:string };
@@ -55,6 +56,7 @@ const [paymentToken,setPaymentToken]=useState('');
 const [receiptOrder,setReceiptOrder]=useState('');
 const [recovering,setRecovering]=useState(false);
 const [verifyingReturn,setVerifyingReturn]=useState(false);
+const [activeOrder,setActiveOrder]=useState('');
 const paidReceiptRef=useRef(false);
 const letter=drafts[active];const template=templates[active];
 useEffect(()=>{
@@ -64,21 +66,29 @@ useEffect(()=>{
   .catch(()=>setSnapscanAvailable(false));
 },[]);
 useEffect(()=>{
- // A SnapScan return may open in an isolated browser context without the
- // session/local storage used by the original checkout. The merchant order
- // reference is in the return URL, so confirm it server-side automatically.
+ // Read the returned order once, then keep subsequent checkout changes in
+ // React state. An effect with [] dependencies would keep polling an old order.
  let storedOrder='';
  try{storedOrder=localStorage.getItem('occentra_snapscan_order')||''}catch{}
- const reference=(new URLSearchParams(window.location.search).get('o')||storedOrder).trim().toLowerCase();
- if(!/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(reference))return;
- setReceiptOrder(reference);
+ const reference=selectSnapscanOrder({returned:new URLSearchParams(window.location.search).get('o'),stored:storedOrder});
+ if(!reference)return;
+ setActiveOrder(reference);
+},[]);
+useEffect(()=>{
+ if(!activeOrder)return;
+ // Each new checkout replaces the previous reconciliation loop. This also
+ // works when a mobile payment app does not navigate back to Occentra.
+ paidReceiptRef.current=false;
+ setReceiptOrder(activeOrder);
  setVerifyingReturn(true);
  setNotice('Checking your SnapScan payment automatically. Please wait; you do not need to pay again.');
- let stopped=false;let attempts=0;let timer:ReturnType<typeof setTimeout>|undefined;
+ let stopped=false;let attempts=0;let inFlight=false;let timer:ReturnType<typeof setTimeout>|undefined;
  const check=async()=>{
-  if(stopped||paidReceiptRef.current)return;
+  if(stopped||paidReceiptRef.current||inFlight)return;
+  if(document.visibilityState==='hidden')return; // Visibility change will trigger an immediate fresh check.
+  inFlight=true;
   try{
-   const response=await fetch('/api/snapscan/recover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reference})});
+   const response=await fetch('/api/snapscan/recover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reference:activeOrder})});
    const result=await response.json();
    if(stopped||paidReceiptRef.current)return;
    if(response.ok&&result.paid){
@@ -106,19 +116,33 @@ useEffect(()=>{
     return;
    }
    if(!response.ok&&response.status>=400&&response.status<500){
+    setVerifyingReturn(false);
     setNotice(result.error||'Unable to check the returned payment.');return;
    }
   }catch{}
+  finally{inFlight=false}
+  if(stopped||paidReceiptRef.current)return;
   if(++attempts<48)timer=setTimeout(check,attempts<16?2500:6000);
-  else setNotice('Payment verification is taking longer than expected. Do not pay again; use the receipt form to retry.');
+  else{setVerifyingReturn(false);setNotice('Payment verification is taking longer than expected. Do not pay again; use the receipt form to retry.');}
  };
- void check();return()=>{stopped=true;if(timer)clearTimeout(timer)};
-},[]);
+ const onReturn=()=>{
+  if(stopped||paidReceiptRef.current||document.visibilityState==='hidden')return;
+  if(timer)clearTimeout(timer);
+  if(!inFlight)timer=setTimeout(check,0);
+ };
+ document.addEventListener('visibilitychange',onReturn);
+ window.addEventListener('pageshow',onReturn);
+ void check();return()=>{
+  stopped=true;if(timer)clearTimeout(timer);
+  document.removeEventListener('visibilitychange',onReturn);
+  window.removeEventListener('pageshow',onReturn);
+ };
+},[activeOrder]);
 useEffect(()=>{
  const query=new URLSearchParams(window.location.search);
  // The return-order checker above already reconciles this payment and restores
  // the saved design when possible; avoid competing status polls for old tokens.
- if(query.has('o'))return;
+ if(query.has('o')||activeOrder)return;
  try{if(localStorage.getItem('occentra_snapscan_order'))return}catch{}
  // A user may navigate back manually instead of following SnapScan's return link.
  // Recover their private token locally and check their existing payment automatically.
@@ -181,7 +205,7 @@ useEffect(()=>{
   window.removeEventListener('pageshow',onReturn);
   document.removeEventListener('visibilitychange',onReturn);
  };
-},[]);
+},[activeOrder]);
 async function pay(){
  if(checkingOut||paid||!snapscanAvailable)return;
  setCheckingOut(true);setNotice('');
@@ -192,13 +216,17 @@ async function pay(){
   setPaymentToken(saved.token);
   const response=await fetch('/api/snapscan/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({designId:'cover-'+template.id,token:saved.token,returnOrigin:window.location.origin})});
   const payment=await response.json();
-  if(!response.ok||!payment.url||typeof payment.reference!=='string'||
-   !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(payment.reference))throw new Error(payment.error||'SnapScan checkout unavailable');
+  const reference=selectSnapscanOrder({checkout:payment.reference});
+  if(!response.ok||!payment.url||!reference)throw new Error(payment.error||'SnapScan checkout unavailable');
   try{
    sessionStorage.setItem('occentra_snapscan_token',saved.token);
    localStorage.setItem('occentra_snapscan_token',saved.token);
-   localStorage.setItem('occentra_snapscan_order',payment.reference);
+   localStorage.setItem('occentra_snapscan_order',reference);
   }catch{}
+  // The new reference becomes authoritative even without a redirect/reload.
+  paidReceiptRef.current=false;
+  setActiveOrder(reference);
+  setReceiptOrder(reference);
   window.location.assign(payment.url);
  }catch(e){setNotice(e instanceof Error?e.message:'Unable to start checkout');setCheckingOut(false)}
 }
@@ -243,6 +271,7 @@ function startNewPurchase(){
   localStorage.removeItem('occentra_snapscan_order');
  }catch{}
  paidReceiptRef.current=true; // Stop the old checkout's scheduled status checks.
+ setActiveOrder('');
  setPaymentToken('');setReceiptOrder('');setVerifyingReturn(false);
  setPaid(false);setNotice('Ready for a separate checkout. This has not made a payment.');
  window.history.replaceState({},'','/cover-letters?template='+template.id);
@@ -273,4 +302,5 @@ return <div className="letters-site">
  <button type="button" disabled={recovering} onClick={verifyReceipt}>{recovering?'Verifying existing payment…':'Verify R15 payment receipt'}</button>
  <p className="letters-note">This checks a previous purchase. It does not make another payment.</p>
  </details>}
+{!paid&&activeOrder&&<p className="letters-note">Occentra order number: <code style={{overflowWrap:'anywhere'}}>{activeOrder}</code>. Keep this number for payment support.</p>}
 </section></div></main></div>}

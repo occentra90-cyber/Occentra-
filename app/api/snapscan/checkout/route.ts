@@ -36,15 +36,22 @@ export async function POST(request: Request) {
       merchant_reference: reference, template_id: design.template_id, amount_cents: amountCents,
       currency: 'ZAR', status: 'pending', payment_provider: 'snapscan',
     }).select('id').single();
-    if (purchaseError || !purchase) return NextResponse.json({ error: 'Could not create order' }, { status: 503 });
+    if (purchaseError || !purchase) {
+      console.error('SnapScan trace', { event: 'checkout_order_failed', reference, code: purchaseError?.code || 'unknown' });
+      return NextResponse.json({ error: 'Could not create order' }, { status: 503 });
+    }
     const { data: linked, error: linkError } = await db.from('guest_designs')
       .update({ purchase_id: purchase.id }).eq('id', design.id).is('purchase_id', null).eq('status', 'draft').select('id').maybeSingle();
-    if (linkError || !linked) return NextResponse.json({ error: 'Could not link saved design' }, { status: 409 });
+    if (linkError || !linked) {
+      console.error('SnapScan trace', { event: 'checkout_design_link_failed', reference, code: linkError?.code || 'conflict' });
+      return NextResponse.json({ error: 'Could not link saved design' }, { status: 409 });
+    }
     // Send the same random reference back to the initiating browser so it can
     // resume this exact order even when the SnapScan app does not redirect.
-    console.info('SnapScan checkout created', { orderSuffix: reference.slice(-6), templateId: design.template_id });
+    console.info('SnapScan trace', { event: 'checkout_created', reference, templateId: design.template_id, amountCents });
     return NextResponse.json({ url: paymentUrl, reference }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch {
+  } catch (error) {
+    console.error('SnapScan trace', { event: 'checkout_failed', category: error instanceof Error ? error.name : 'unknown' });
     return NextResponse.json({ error: 'SnapScan checkout is unavailable' }, { status: 503 });
   }
 }

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       return respond({ error: 'Enter the complete SnapScan order number' }, 400);
     }
     const result = await reconcileSnapscanPayment(reference);
-    console.info('SnapScan receipt reconciliation:', result, reference.slice(-6));
+    console.info('SnapScan trace', { event: 'receipt_reconciled', reference, result });
     if (result === 'paid') {
       const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { persistSession: false, autoRefreshToken: false } });

@@ -24,12 +24,26 @@ async function getVerifiedPayment(reference: string, amountCents: number, notifi
     headers: { Authorization: 'Basic ' + Buffer.from(key + ':').toString('base64') },
     cache: 'no-store', signal: AbortSignal.timeout(10000),
   });
-  if (!response.ok) throw new Error('SnapScan payment lookup failed');
+  if (!response.ok) throw new Error('SnapScan payment lookup returned HTTP ' + response.status);
   const payments: unknown = await response.json();
   if (!Array.isArray(payments)) throw new Error('Invalid SnapScan payment response');
-  return (payments as SnapscanPayment[]).find(payment =>
+  const matching = (payments as SnapscanPayment[]).find(payment =>
     payment && isMatchingSnapscanPayment(payment, reference, amountCents) &&
     (notifiedId === undefined || payment.id === notifiedId)) || null;
+  if (!matching) {
+    console.info('SnapScan completed-payment lookup did not match', {
+      orderSuffix: reference.slice(-6),
+      count: payments.length,
+      checks: (payments as SnapscanPayment[]).slice(0, 3).map(payment => ({
+        completed: payment.status === 'completed',
+        reference: payment.merchantReference === reference,
+        amount: payment.totalAmount === amountCents,
+        required: payment.requiredAmount === amountCents,
+        type: payment.transactionType === 'payment',
+      })),
+    });
+  }
+  return matching;
 }
 
 /**
@@ -51,7 +65,8 @@ export async function reconcileSnapscanPayment(reference: string, notifiedId?: n
   const { data: design, error: designError } = await db.from('guest_designs')
     .select('id,template_id,status,expires_at,purchase_id').eq('purchase_id', order.id).maybeSingle();
   if (designError) throw designError;
-  if (!design || design.template_id !== order.template_id || Date.parse(design.expires_at) <= Date.now()) {
+  if (!design || design.template_id !== order.template_id ||
+      (design.status !== 'paid' && Date.parse(design.expires_at) <= Date.now())) {
     throw new Error('Paid design is unavailable');
   }
   if (order.status === 'paid' && design.status === 'paid' && order.snapscan_payment_id) {
@@ -80,7 +95,8 @@ export async function reconcileSnapscanPayment(reference: string, notifiedId?: n
 
   if (design.status === 'draft') {
     const { error: unlockError } = await db.from('guest_designs')
-      .update({ status: 'paid' }).eq('id', design.id).eq('purchase_id', order.id).eq('status', 'draft');
+      .update({ status: 'paid', expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() })
+      .eq('id', design.id).eq('purchase_id', order.id).eq('status', 'draft');
     if (unlockError) throw unlockError;
   }
   const { data: confirmedDesign, error: unlockedError } = await db.from('guest_designs')

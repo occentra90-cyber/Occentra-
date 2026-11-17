@@ -52,6 +52,8 @@ const [checkingOut,setCheckingOut]=useState(false);
 const [snapscanAvailable,setSnapscanAvailable]=useState(false);
 const [paid,setPaid]=useState(false);
 const [paymentToken,setPaymentToken]=useState('');
+const [receiptOrder,setReceiptOrder]=useState('');
+const [recovering,setRecovering]=useState(false);
 const letter=drafts[active];const template=templates[active];
 useEffect(()=>{
  fetch('/api/snapscan/config',{cache:'no-store'})
@@ -92,7 +94,7 @@ useEffect(()=>{
       setDrafts(old=>old.map((d,i)=>i===index?record.design.fields as Letter:d));
       setActive(index);setEditing(true);setPaid(true);setNotice('Payment verified. You can download your letter.');
      }
-    }
+    }else setNotice('Payment was confirmed, but your saved letter could not be loaded. Contact Occentra support with the order number.');
     return;
    }
    if(++attempts<20)setTimeout(check,2500);
@@ -117,6 +119,27 @@ async function pay(){
  }catch(e){setNotice(e instanceof Error?e.message:'Unable to start checkout');setCheckingOut(false)}
 }
 
+async function verifyReceipt(){
+ if(recovering)return;
+ const reference=receiptOrder.trim().toLowerCase();
+ if(!/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(reference)){
+  setNotice('Enter the complete Order Number from your SnapScan receipt.');return;
+ }
+ setRecovering(true);setNotice('Checking this order directly with SnapScan. This will not charge you again.');
+ try{
+  const response=await fetch('/api/snapscan/recover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reference})});
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.error||'Payment verification unavailable');
+  if(result.paid){
+   if(paymentToken)window.location.reload();
+   else setNotice('SnapScan confirmed this order! Open the original browser tab where you edited and paid for your letter, then refresh it to download.');
+  }else setNotice(result.found
+   ? 'This order exists, but SnapScan has not returned a matching completed payment. Do not pay again; contact Occentra support with the receipt.'
+   : 'We could not find this order number in Occentra. Check the number on your SnapScan receipt.');
+ }catch(e){setNotice(e instanceof Error?e.message:'Unable to check the receipt right now.')}
+ finally{setRecovering(false)}
+}
+
 const update=(key:keyof Letter,value:string)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,[key]:value}:d));
 const addParagraph=()=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:[...d.paragraphs,'']}:d));
 const removeParagraph=(index:number)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:d.paragraphs.filter((_,j)=>j!==index)}:d));
@@ -133,4 +156,12 @@ return <div className="letters-site">
 <button type="button" className="letter-add" onClick={addParagraph}>+ Add paragraph</button>
 <label>Closing<input value={letter.closing} onChange={e=>update('closing',e.target.value)}/></label>
 <p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : paymentToken ? <button type="button" onClick={()=>window.location.reload()}>Check existing SnapScan payment</button> : <button type="button" disabled={checkingOut||!snapscanAvailable} onClick={pay}>{checkingOut?'Opening SnapScan…':snapscanAvailable?'Pay R15 · SnapScan':'SnapScan checkout temporarily unavailable'}</button>}{!paid&&!snapscanAvailable&&<p className="letters-note">We are finishing our secure SnapScan connection. Please check back soon to purchase.</p>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
+{!paid&&<div className="letters-payment">
+ <label htmlFor="snapscan-receipt-order">Already paid? Enter the Order Number on your SnapScan receipt.
+  <input id="snapscan-receipt-order" type="text" autoComplete="off" spellCheck={false}
+   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value={receiptOrder} onChange={e=>setReceiptOrder(e.target.value)}/>
+ </label>
+ <button type="button" disabled={recovering} onClick={verifyReceipt}>{recovering?'Verifying existing payment…':'Verify R15 payment receipt'}</button>
+ <p className="letters-note">This checks a previous purchase. It does not make another payment.</p>
+ </div>}
 </section></div></main></div>}

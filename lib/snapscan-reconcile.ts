@@ -24,6 +24,8 @@ async function getVerifiedPayment(reference: string, amountCents: number, notifi
     headers: { Authorization: 'Basic ' + Buffer.from(key + ':').toString('base64') },
     cache: 'no-store', signal: AbortSignal.timeout(10000),
   });
+  if (response.status === 401 || response.status === 403) throw new Error('SnapScan API authentication rejected');
+  if (response.status === 429) throw new Error('SnapScan API rate limited');
   if (!response.ok) throw new Error('SnapScan payment lookup returned HTTP ' + response.status);
   const payments: unknown = await response.json();
   if (!Array.isArray(payments)) throw new Error('Invalid SnapScan payment response');
@@ -37,7 +39,7 @@ async function getVerifiedPayment(reference: string, amountCents: number, notifi
       checks: (payments as SnapscanPayment[]).slice(0, 3).map(payment => ({
         completed: payment.status === 'completed',
         reference: payment.merchantReference === reference,
-        amount: payment.totalAmount === amountCents,
+        amount: typeof payment.totalAmount === 'number' && payment.totalAmount - (payment.tipAmount ?? 0) >= amountCents,
         required: payment.requiredAmount === amountCents,
         type: payment.transactionType === 'payment',
       })),
@@ -59,7 +61,7 @@ export async function reconcileSnapscanPayment(reference: string, notifiedId?: n
     .select('id,merchant_reference,template_id,amount_cents,currency,status,payment_provider,snapscan_payment_id')
     .eq('merchant_reference', reference).maybeSingle();
   if (orderError) throw orderError;
-  if (!order) {
+  if (!order || order.payment_provider !== 'snapscan') {
     console.info('SnapScan trace', { event: 'order_not_found', reference });
     return 'unknown';
   }
@@ -70,11 +72,10 @@ export async function reconcileSnapscanPayment(reference: string, notifiedId?: n
   const { data: design, error: designError } = await db.from('guest_designs')
     .select('id,template_id,status,expires_at,purchase_id').eq('purchase_id', order.id).maybeSingle();
   if (designError) throw designError;
-  if (!design || design.template_id !== order.template_id ||
-      (design.status !== 'paid' && Date.parse(design.expires_at) <= Date.now())) {
-    throw new Error('Paid design is unavailable');
+  if (design && design.template_id !== order.template_id) {
+    throw new Error('Payment order mismatch');
   }
-  if (order.status === 'paid' && design.status === 'paid' && order.snapscan_payment_id) {
+  if (order.status === 'paid' && (!design || design.status === 'paid') && order.snapscan_payment_id) {
     if (notifiedId !== undefined && order.snapscan_payment_id !== String(notifiedId)) throw new Error('Payment identifier mismatch');
     console.info('SnapScan trace', { event: 'order_already_unlocked', reference, paymentId: order.snapscan_payment_id });
     return 'paid';
@@ -99,7 +100,7 @@ export async function reconcileSnapscanPayment(reference: string, notifiedId?: n
     throw new Error('Payment record was not confirmed');
   }
 
-  if (design.status === 'draft') {
+  if (design?.status === 'draft') {
     const { error: unlockError } = await db.from('guest_designs')
       // The database guard makes expires_at immutable. Its initial value
       // already grants 30 days, so only update payment status here.
@@ -107,9 +108,12 @@ export async function reconcileSnapscanPayment(reference: string, notifiedId?: n
       .eq('id', design.id).eq('purchase_id', order.id).eq('status', 'draft');
     if (unlockError) throw unlockError;
   }
-  const { data: confirmedDesign, error: unlockedError } = await db.from('guest_designs')
-    .select('status').eq('id', design.id).maybeSingle();
-  if (unlockedError || confirmedDesign?.status !== 'paid') throw new Error('Paid design was not unlocked');
+  if (design) {
+    const { data: confirmedDesign, error: unlockedError } = await db.from('guest_designs')
+      .select('status').eq('id', design.id).maybeSingle();
+    if (unlockedError) throw unlockedError;
+    if (confirmedDesign && confirmedDesign.status !== 'paid') throw new Error('Paid design was not unlocked');
+  }
   console.info('SnapScan trace', { event: 'design_unlocked', reference, paymentId, templateId: order.template_id });
   return 'paid';
 }

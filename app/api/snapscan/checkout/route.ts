@@ -10,7 +10,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     if (typeof body?.designId !== 'string' || !/^(cv-[0-5]|cover-(classic|navy|sage|executive))$/.test(body.designId) ||
-        typeof body?.token !== 'string' || !/^[a-f0-9]{64}$/.test(body.token)) {
+        typeof body?.token !== 'string' || !/^[a-f0-9]{64}$/.test(body.token) ||
+        (body.returnOrigin !== undefined && typeof body.returnOrigin !== 'string')) {
       return NextResponse.json({ error: 'Invalid saved design' }, { status: 400 });
     }
     const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     // Validate the merchant URL before creating an order. Do not accept an amount or redirect from the browser.
     const returnPath = body.designId.startsWith('cover-')
       ? '/cover-letters?template=' + body.designId.slice('cover-'.length) : '/';
-    const paymentUrl = createSnapscanPaymentUrl(reference, amountCents, returnPath);
+    const paymentUrl = createSnapscanPaymentUrl(reference, amountCents, returnPath, body.returnOrigin);
     const { data: purchase, error: purchaseError } = await db.from('purchases').insert({
       merchant_reference: reference, template_id: design.template_id, amount_cents: amountCents,
       currency: 'ZAR', status: 'pending', payment_provider: 'snapscan',

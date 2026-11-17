@@ -22,6 +22,13 @@ test('cover-letter QR also fits the SnapScan 256-character limit', () => {
   assert.equal(url.searchParams.get('r_url'), 'https://occentra-occentra.vercel.app/cover-letters?template=executive&payment=returned&provider=snapscan');
 });
 
+test('return URL stays on the customer's trusted Occentra domain', () => {
+  const url = new URL(createSnapscanPaymentUrl('order-123', 1500, '/cover-letters?template=sage', 'https://occentra.vercel.app'));
+  assert.equal(url.searchParams.get('r_url'), 'https://occentra.vercel.app/cover-letters?template=sage&payment=returned&provider=snapscan');
+  assert.ok(url.toString().length <= 256);
+  assert.throws(() => createSnapscanPaymentUrl('order-123', 1500, '/', 'https://untrusted.example'), /Invalid payment return origin/);
+});
+
 test('recognises only exact completed payment, amount and merchant reference', () => {
   const valid = { id: 881, status: 'completed', merchantReference: 'order-123',
     totalAmount: 2000, requiredAmount: 2000, transactionType: 'payment' };

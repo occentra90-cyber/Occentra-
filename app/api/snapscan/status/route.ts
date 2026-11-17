@@ -33,7 +33,9 @@ export async function GET(request: Request) {
     if (order.status === 'paid' && design.status === 'paid' && order.snapscan_payment_id) return reply({ paid: true });
     const status = await reconcileSnapscanPayment(order.merchant_reference);
     return reply({ paid: status === 'paid' });
-  } catch {
+  } catch (error) {
+    // Expose the failure category in server logs; never log the private token.
+    console.error('SnapScan verification failed:', error instanceof Error ? error.message : 'unknown error');
     return reply({ error: 'Payment verification is temporarily unavailable' }, 503);
   }
 }

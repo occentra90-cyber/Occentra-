@@ -61,13 +61,22 @@ useEffect(()=>{
 },[]);
 useEffect(()=>{
  const query=new URLSearchParams(window.location.search);
- const token=query.get('design')||(query.get('provider')==='snapscan'?sessionStorage.getItem('occentra_snapscan_token')||'':'');
+ // A user may navigate back manually instead of following SnapScan's return link.
+ // Recover their private token locally and check their existing payment automatically.
+ let storedSnapscanToken='';
+ try{storedSnapscanToken=sessionStorage.getItem('occentra_snapscan_token')||localStorage.getItem('occentra_snapscan_token')||''}catch{}
+ const token=query.get('design')||storedSnapscanToken;
  if(!/^[a-f0-9]{64}$/.test(token))return;
- if(!query.has('design')){query.set('design',token);window.history.replaceState({},'',window.location.pathname+'?'+query.toString())}
+ const isSnapscan=query.get('provider')==='snapscan'||Boolean(storedSnapscanToken&&token===storedSnapscanToken);
+ if(!query.has('design')){
+  query.set('design',token);
+  if(isSnapscan)query.set('provider','snapscan');
+  window.history.replaceState({},'',window.location.pathname+'?'+query.toString());
+ }
  setPaymentToken(token);
  if(query.get('payment')==='cancelled'){setNotice('Payment was cancelled. You have not been charged by Occentra.');return;}
  let stopped=false;let attempts=0;
- const endpoint=query.get('provider')==='snapscan'?'/api/snapscan/status':'/api/payfast/status';
+ const endpoint=isSnapscan?'/api/snapscan/status':'/api/payfast/status';
  const check=async()=>{
   try{
    const response=await fetch(endpoint+'?token='+encodeURIComponent(token),{cache:'no-store'});
@@ -100,10 +109,10 @@ async function pay(){
   const saved=await savedResponse.json();
   if(!savedResponse.ok||!saved.token)throw new Error(saved.error||'Unable to save letter');
   setPaymentToken(saved.token);
-  const response=await fetch('/api/snapscan/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({designId:'cover-'+template.id,token:saved.token})});
+  const response=await fetch('/api/snapscan/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({designId:'cover-'+template.id,token:saved.token,returnOrigin:window.location.origin})});
   const payment=await response.json();
   if(!response.ok||!payment.url)throw new Error(payment.error||'SnapScan checkout unavailable');
-  sessionStorage.setItem('occentra_snapscan_token',saved.token);
+  try{sessionStorage.setItem('occentra_snapscan_token',saved.token);localStorage.setItem('occentra_snapscan_token',saved.token)}catch{}
   window.location.assign(payment.url);
  }catch(e){setNotice(e instanceof Error?e.message:'Unable to start checkout');setCheckingOut(false)}
 }
@@ -123,5 +132,5 @@ return <div className="letters-site">
 <h3>Letter paragraphs</h3>{letter.paragraphs.map((p,i)=><label key={i}>Paragraph {i+1}<textarea rows={Math.max(3,Math.ceil(p.length/75))} value={p} onChange={e=>updateParagraph(i,e.target.value)}/></label>)}
 <button type="button" className="letter-add" onClick={addParagraph}>+ Add paragraph</button>
 <label>Closing<input value={letter.closing} onChange={e=>update('closing',e.target.value)}/></label>
-<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : <button type="button" disabled={checkingOut||!snapscanAvailable} onClick={pay}>{checkingOut?'Opening SnapScan…':snapscanAvailable?'Pay R15 · SnapScan':'SnapScan checkout temporarily unavailable'}</button>}{!paid&&!snapscanAvailable&&<p className="letters-note">We are finishing our secure SnapScan connection. Please check back soon to purchase.</p>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
+<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : paymentToken ? <button type="button" onClick={()=>window.location.reload()}>Check existing SnapScan payment</button> : <button type="button" disabled={checkingOut||!snapscanAvailable} onClick={pay}>{checkingOut?'Opening SnapScan…':snapscanAvailable?'Pay R15 · SnapScan':'SnapScan checkout temporarily unavailable'}</button>}{!paid&&!snapscanAvailable&&<p className="letters-note">We are finishing our secure SnapScan connection. Please check back soon to purchase.</p>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
 </section></div></main></div>}

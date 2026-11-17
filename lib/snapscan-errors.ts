@@ -1,8 +1,14 @@
 export type SnapscanFailureCode = 'not_configured' | 'upstream_rate_limited' | 'upstream_unavailable' | 'upstream_auth' | 'upstream_bad_response' | 'database_unavailable' | 'database_rejected' | 'order_mismatch' | 'order_closed' | 'payment_id_conflict' | 'payment_not_confirmed';
 const retryableCodes = new Set<SnapscanFailureCode>(['not_configured','upstream_rate_limited','upstream_unavailable','upstream_auth','upstream_bad_response','database_unavailable','payment_not_confirmed']);
 export class SnapscanError extends Error {
-  constructor(public readonly code: SnapscanFailureCode, public readonly detail?: string, public readonly retryAfterSeconds?: number) {
+  readonly code: SnapscanFailureCode;
+  readonly detail?: string;
+  readonly retryAfterSeconds?: number;
+  constructor(code: SnapscanFailureCode, detail?: string, retryAfterSeconds?: number) {
     super(code + (detail ? ': ' + detail : ''));
+    this.code = code;
+    this.detail = detail;
+    this.retryAfterSeconds = retryAfterSeconds;
     this.name = 'SnapscanError';
   }
   get retryable() { return retryableCodes.has(this.code); }

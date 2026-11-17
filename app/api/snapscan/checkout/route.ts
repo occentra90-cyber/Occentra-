@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       .update({ purchase_id: purchase.id }).eq('id', design.id).is('purchase_id', null).eq('status', 'draft').select('id').maybeSingle();
     if (linkError || !linked) {
       console.error('SnapScan trace', { event: 'checkout_design_link_failed', reference, code: linkError?.code || 'conflict' });
+      // No payment link is returned in this case, so close the unused order instead of leaving it pending.
       await db.from('purchases').update({ status: 'cancelled' }).eq('id', purchase.id).eq('status', 'pending');
       return NextResponse.json({ error: 'Could not link saved design' }, { status: 409 });
     }
@@ -52,7 +53,9 @@ export async function POST(request: Request) {
     console.info('SnapScan trace', { event: 'checkout_created', reference, templateId: design.template_id, amountCents });
     return NextResponse.json({ url: paymentUrl, reference }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    console.error('SnapScan trace', { event: 'checkout_failed', category: error instanceof Error ? error.name : 'unknown' });
+    // Our own configuration errors carry no secrets; log the message so the cause is visible.
+    console.error('SnapScan trace', { event: 'checkout_failed', category: error instanceof Error ? error.name : 'unknown',
+      message: error instanceof Error ? error.message.slice(0, 120) : 'unknown' });
     if (error instanceof SyntaxError) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     if (error instanceof Error && error.message === 'Invalid payment return origin') {
       return NextResponse.json({ error: 'Open Occentra from its official address and try again' }, { status: 400 });

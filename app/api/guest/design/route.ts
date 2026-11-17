@@ -14,7 +14,10 @@ function db() {
   return createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 async function purgeExpired() {
-  const { error } = await db().from('guest_designs').delete().lt('expires_at', new Date().toISOString());
+  // A completed purchase must not be erased when the two-hour draft
+  // checkout window expires. Paid designs need to remain downloadable.
+  const { error } = await db().from('guest_designs').delete()
+    .eq('status', 'draft').is('purchase_id', null).lt('expires_at', new Date().toISOString());
   if (error) console.error('guest_cleanup_failed', error.code);
 }
 function fail(error: string, status: number) { return NextResponse.json({ error }, { status, headers: { 'Cache-Control': 'no-store' } }); }
@@ -57,7 +60,7 @@ export async function GET(request: Request) {
     await purgeExpired();
     const { data, error } = await lookup(token);
     if (error) throw error;
-    if (!data || Date.parse(data.expires_at) <= Date.now()) return fail('This link has expired or is unavailable', 404);
+    if (!data || (data.status !== 'paid' && Date.parse(data.expires_at) <= Date.now())) return fail('This link has expired or is unavailable', 404);
     return NextResponse.json({ design: data }, { headers: { 'Cache-Control': 'no-store' } });
   } catch { return fail('Unable to load design', 503); }
 }

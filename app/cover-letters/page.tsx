@@ -49,19 +49,28 @@ const [active,setActive]=useState(0);const [editing,setEditing]=useState(false);
 useEffect(()=>{const id=new URLSearchParams(window.location.search).get('template');const index=templates.findIndex(t=>t.id===id);if(index>=0){setActive(index);setEditing(true)}},[]);const [drafts,setDrafts]=useState<Letter[]>(templates.map(t=>({...t.sample,paragraphs:[...t.sample.paragraphs]})));
 const [notice,setNotice]=useState('');
 const [checkingOut,setCheckingOut]=useState(false);
+const [snapscanAvailable,setSnapscanAvailable]=useState(false);
 const [paid,setPaid]=useState(false);
 const [paymentToken,setPaymentToken]=useState('');
 const letter=drafts[active];const template=templates[active];
 useEffect(()=>{
+ fetch('/api/snapscan/config',{cache:'no-store'})
+  .then(r=>r.ok?r.json():{available:false})
+  .then(data=>setSnapscanAvailable(data.available===true))
+  .catch(()=>setSnapscanAvailable(false));
+},[]);
+useEffect(()=>{
  const query=new URLSearchParams(window.location.search);
- const token=query.get('design')||'';
+ const token=query.get('design')||(query.get('provider')==='snapscan'?sessionStorage.getItem('occentra_snapscan_token')||'':'');
  if(!/^[a-f0-9]{64}$/.test(token))return;
+ if(!query.has('design')){query.set('design',token);window.history.replaceState({},'',window.location.pathname+'?'+query.toString())}
  setPaymentToken(token);
  if(query.get('payment')==='cancelled'){setNotice('Payment was cancelled. You have not been charged by Occentra.');return;}
  let stopped=false;let attempts=0;
+ const endpoint=query.get('provider')==='snapscan'?'/api/snapscan/status':'/api/payfast/status';
  const check=async()=>{
   try{
-   const response=await fetch('/api/payfast/status?token='+encodeURIComponent(token),{cache:'no-store'});
+   const response=await fetch(endpoint+'?token='+encodeURIComponent(token),{cache:'no-store'});
    const result=await response.json();
    if(stopped)return;
    if(result.paid){
@@ -83,7 +92,7 @@ useEffect(()=>{
  };
  check();return()=>{stopped=true};
 },[]);
-async function pay(){
+async function pay(provider:'payfast'|'snapscan'='payfast'){
  if(checkingOut||paid)return;
  setCheckingOut(true);setNotice('');
  try{
@@ -91,8 +100,14 @@ async function pay(){
   const saved=await savedResponse.json();
   if(!savedResponse.ok||!saved.token)throw new Error(saved.error||'Unable to save letter');
   setPaymentToken(saved.token);
-  const response=await fetch('/api/payfast/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({designId:'cover-'+template.id,token:saved.token})});
+  const response=await fetch(provider==='snapscan'?'/api/snapscan/checkout':'/api/payfast/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({designId:'cover-'+template.id,token:saved.token})});
   const payment=await response.json();
+  if(provider==='snapscan'){
+   if(!response.ok||!payment.url)throw new Error(payment.error||'SnapScan checkout unavailable');
+   sessionStorage.setItem('occentra_snapscan_token',saved.token);
+   window.location.assign(payment.url);
+   return;
+  }
   if(!response.ok||!payment.url||!payment.fields)throw new Error(payment.error||'Checkout unavailable');
   const form=document.createElement('form');form.method='POST';form.action=payment.url;
   Object.entries(payment.fields as Record<string,string>).forEach(([name,value])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input)});
@@ -109,11 +124,11 @@ return <div className="letters-site">
 <main className="letters-main">{!editing && <div className="letters-intro"><span>JOB APPLICATION ESSENTIALS</span><h1>Cover letters that look professional.</h1><p>Choose a design and customise the complete sample letter. Your edits appear immediately. The names and employers shown are fictional examples.</p></div>}
 {!editing && <div className="letters-grid">{templates.map((t,i)=><button type="button" className={'letter-choice '+(active===i?'chosen':'')} key={t.id} onClick={()=>{setActive(i);setEditing(true);setNotice('');window.history.replaceState({},'', '/cover-letters?template='+t.id)}} aria-pressed={active===i}><div className={'letter-thumb theme-'+t.id}><div className="thumb-name">{t.sample.name}</div><div className="thumb-line"/><div className="thumb-line short"/><div className="thumb-gap"/>{Array.from({length:9},(_,j)=><div className={'thumb-line '+(j%3===0?'short':'')} key={j}/>)}</div><b>{t.title}</b><small>{t.role} · R15</small></button>)}</div>}
 {editing && <div className="letters-editor-nav"><button type="button" onClick={()=>{setEditing(false);window.history.replaceState({},'','/cover-letters')}}>← All cover letter designs</button><strong>{template.title} · R15</strong></div>}
-<div className="letters-workspace"><section className="letters-preview"><div className="letters-section-title"><h2>Live preview</h2><span>{template.title}</span></div><LetterPage letter={letter} theme={template.id}/><p className="letters-note">This is a live sample preview. PDF export and paid checkout are not yet enabled.</p></section>
+<div className="letters-workspace"><section className="letters-preview"><div className="letters-section-title"><h2>Live preview</h2><span>{template.title}</span></div><LetterPage letter={letter} theme={template.id}/><p className="letters-note">This is a sample preview. Downloads unlock after payment verification.</p></section>
 <section className="letters-editor"><fieldset disabled={paid} className="letters-fields"><div className="letters-section-title"><h2>Edit your letter</h2><button type="button" onClick={()=>{setDrafts(old=>old.map((d,i)=>i===active?{...template.sample,paragraphs:[...template.sample.paragraphs]}:d));setNotice('Example restored.')}}>Reset example</button></div>
 {([['name','Full name'],['city','City and province'],['phone','Phone number'],['email','Email'],['date','Date'],['recipient','Recipient'],['company','Company'],['location','Company location'],['subject','Job application subject'],['greeting','Greeting']] as [keyof Letter,string][]).map(([key,label])=><label key={key}>{label}<input value={letter[key] as string} onChange={e=>update(key,e.target.value)}/></label>)}
 <h3>Letter paragraphs</h3>{letter.paragraphs.map((p,i)=><label key={i}>Paragraph {i+1}<textarea rows={Math.max(3,Math.ceil(p.length/75))} value={p} onChange={e=>updateParagraph(i,e.target.value)}/></label>)}
 <button type="button" className="letter-add" onClick={addParagraph}>+ Add paragraph</button>
 <label>Closing<input value={letter.closing} onChange={e=>update('closing',e.target.value)}/></label>
-<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : <button type="button" disabled={checkingOut} onClick={pay}>{checkingOut?'Opening Payfast…':'Pay R15 · Payfast'}</button>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
+<p className="letters-note">Tailor the sample to the actual vacancy. Only include experience and achievements that are true for you.</p></fieldset><div className="letters-payment">{paid ? <button type="button" onClick={()=>window.print()}>Download paid cover letter as PDF</button> : <><button type="button" disabled={checkingOut} onClick={()=>pay('payfast')}>{checkingOut?'Opening checkout…':'Pay R15 · Payfast'}</button>{snapscanAvailable&&<button type="button" disabled={checkingOut} onClick={()=>pay('snapscan')}>{checkingOut?'Opening checkout…':'Pay R15 · SnapScan'}</button>}</>}<p className="letters-note">Secure checkout. Download unlocks only after verified payment.</p>{paymentToken&&!paid&&<p className="letters-note">Your payment reference is saved in this browser link until it expires.</p>}{notice && <p role="status">{notice}</p>}</div>
 </section></div></main></div>}

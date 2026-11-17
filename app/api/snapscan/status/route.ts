@@ -1,9 +1,9 @@
-import { describeSnapscanFailure } from '../../../../lib/snapscan-errors';
 import { createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { snapscanVerificationConfigured } from '../../../../lib/snapscan';
 import { reconcileSnapscanPayment } from '../../../../lib/snapscan-reconcile';
+import { describeSnapscanFailure } from '../../../../lib/snapscan-errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,9 +35,9 @@ export async function GET(request: Request) {
     const status = await reconcileSnapscanPayment(order.merchant_reference);
     return reply({ paid: status === 'paid' });
   } catch (error) {
-    // Expose the failure category in server logs; never log the private token.
+    // Log the failure category (never the private token) so the real cause is visible in Vercel logs.
     const failure = describeSnapscanFailure(error);
-    console.error('SnapScan verification failed:', failure.log);
+    console.error('SnapScan status check failed', failure.log);
     return NextResponse.json(failure.body, { status: failure.status, headers: failure.headers });
   }
 }

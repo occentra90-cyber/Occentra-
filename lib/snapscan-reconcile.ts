@@ -95,7 +95,9 @@ export async function reconcileSnapscanPayment(reference: string, notifiedId?: n
 
   if (design.status === 'draft') {
     const { error: unlockError } = await db.from('guest_designs')
-      .update({ status: 'paid', expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() })
+      // The database guard makes expires_at immutable. Its initial value
+      // already grants 30 days, so only update payment status here.
+      .update({ status: 'paid' })
       .eq('id', design.id).eq('purchase_id', order.id).eq('status', 'draft');
     if (unlockError) throw unlockError;
   }

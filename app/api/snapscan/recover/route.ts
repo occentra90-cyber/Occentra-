@@ -29,7 +29,12 @@ export async function POST(request: Request) {
     console.info('SnapScan receipt reconciliation:', result, reference.slice(-6));
     return respond({ paid: result === 'paid', found: result !== 'unknown' });
   } catch (error) {
-    console.error('SnapScan receipt reconciliation failed:', error instanceof Error ? error.message : 'unknown');
+    // Supabase returns structured errors which are not Error instances.
+    // Log only the diagnostic code/category; never credentials or private tokens.
+    const diagnostic = error instanceof Error ? error.message :
+      error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+        ? 'database code ' + error.code : 'unknown';
+    console.error('SnapScan receipt reconciliation failed:', diagnostic);
     return respond({ error: 'Unable to verify with SnapScan right now' }, 503);
   }
 }

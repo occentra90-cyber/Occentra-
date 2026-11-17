@@ -131,8 +131,13 @@ async function verifyReceipt(){
   const result=await response.json();
   if(!response.ok)throw new Error(result.error||'Payment verification unavailable');
   if(result.paid){
-   if(paymentToken)window.location.reload();
-   else setNotice('SnapScan confirmed this order! Open the original browser tab where you edited and paid for your letter, then refresh it to download.');
+   const index=templates.findIndex(t=>'cover-'+t.id===result.templateId);
+   if(index<0)throw new Error('This paid receipt is not for a cover letter.');
+   // The browser may still hold the private token of a later, unpaid checkout.
+   // The receipt grants a freshly editable paid copy without exposing private
+   // contents of the original saved design or requiring a second payment.
+   setActive(index);setEditing(true);setPaid(true);
+   setNotice('R15 payment confirmed! You can now edit and download your paid cover letter. Check the text before saving the PDF.');
   }else setNotice(result.found
    ? 'This order exists, but SnapScan has not returned a matching completed payment. Do not pay again; contact Occentra support with the receipt.'
    : 'We could not find this order number in Occentra. Check the number on your SnapScan receipt.');
@@ -150,7 +155,7 @@ return <div className="letters-site">
 {!editing && <div className="letters-grid">{templates.map((t,i)=><button type="button" className={'letter-choice '+(active===i?'chosen':'')} key={t.id} onClick={()=>{setActive(i);setEditing(true);setNotice('');window.history.replaceState({},'', '/cover-letters?template='+t.id)}} aria-pressed={active===i}><div className={'letter-thumb theme-'+t.id}><div className="thumb-name">{t.sample.name}</div><div className="thumb-line"/><div className="thumb-line short"/><div className="thumb-gap"/>{Array.from({length:9},(_,j)=><div className={'thumb-line '+(j%3===0?'short':'')} key={j}/>)}</div><b>{t.title}</b><small>{t.role} · R15</small></button>)}</div>}
 {editing && <div className="letters-editor-nav"><button type="button" onClick={()=>{setEditing(false);window.history.replaceState({},'','/cover-letters')}}>← All cover letter designs</button><strong>{template.title} · R15</strong></div>}
 <div className="letters-workspace"><section className="letters-preview"><div className="letters-section-title"><h2>Live preview</h2><span>{template.title}</span></div><LetterPage letter={letter} theme={template.id}/><p className="letters-note">This is a sample preview. Downloads unlock after payment verification.</p></section>
-<section className="letters-editor"><fieldset disabled={paid} className="letters-fields"><div className="letters-section-title"><h2>Edit your letter</h2><button type="button" onClick={()=>{setDrafts(old=>old.map((d,i)=>i===active?{...template.sample,paragraphs:[...template.sample.paragraphs]}:d));setNotice('Example restored.')}}>Reset example</button></div>
+<section className="letters-editor"><fieldset className="letters-fields"><div className="letters-section-title"><h2>Edit your letter</h2><button type="button" onClick={()=>{setDrafts(old=>old.map((d,i)=>i===active?{...template.sample,paragraphs:[...template.sample.paragraphs]}:d));setNotice('Example restored.')}}>Reset example</button></div>
 {([['name','Full name'],['city','City and province'],['phone','Phone number'],['email','Email'],['date','Date'],['recipient','Recipient'],['company','Company'],['location','Company location'],['subject','Job application subject'],['greeting','Greeting']] as [keyof Letter,string][]).map(([key,label])=><label key={key}>{label}<input value={letter[key] as string} onChange={e=>update(key,e.target.value)}/></label>)}
 <h3>Letter paragraphs</h3>{letter.paragraphs.map((p,i)=><label key={i}>Paragraph {i+1}<textarea rows={Math.max(3,Math.ceil(p.length/75))} value={p} onChange={e=>updateParagraph(i,e.target.value)}/></label>)}
 <button type="button" className="letter-add" onClick={addParagraph}>+ Add paragraph</button>

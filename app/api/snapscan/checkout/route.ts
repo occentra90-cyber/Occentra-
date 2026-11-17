@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       .update({ purchase_id: purchase.id }).eq('id', design.id).is('purchase_id', null).eq('status', 'draft').select('id').maybeSingle();
     if (linkError || !linked) {
       console.error('SnapScan trace', { event: 'checkout_design_link_failed', reference, code: linkError?.code || 'conflict' });
+      await db.from('purchases').update({ status: 'cancelled' }).eq('id', purchase.id).eq('status', 'pending');
       return NextResponse.json({ error: 'Could not link saved design' }, { status: 409 });
     }
     // Send the same random reference back to the initiating browser so it can
@@ -52,6 +53,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: paymentUrl, reference }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('SnapScan trace', { event: 'checkout_failed', category: error instanceof Error ? error.name : 'unknown' });
+    if (error instanceof SyntaxError) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    if (error instanceof Error && error.message === 'Invalid payment return origin') {
+      return NextResponse.json({ error: 'Open Occentra from its official address and try again' }, { status: 400 });
+    }
     return NextResponse.json({ error: 'SnapScan checkout is unavailable' }, { status: 503 });
   }
 }

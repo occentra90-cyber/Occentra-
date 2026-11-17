@@ -1,3 +1,4 @@
+import { describeSnapscanFailure } from '../../../../lib/snapscan-errors';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { reconcileSnapscanPayment } from '../../../../lib/snapscan-reconcile';
@@ -43,12 +44,8 @@ export async function POST(request: Request) {
     }
     return respond({ paid: false, found: result !== 'unknown' });
   } catch (error) {
-    // Supabase returns structured errors which are not Error instances.
-    // Log only the diagnostic code/category; never credentials or private tokens.
-    const diagnostic = error instanceof Error ? error.message :
-      error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
-        ? 'database code ' + error.code : 'unknown';
-    console.error('SnapScan receipt reconciliation failed:', diagnostic);
-    return respond({ error: 'Unable to verify with SnapScan right now' }, 503);
+    const failure = describeSnapscanFailure(error);
+    console.error('SnapScan receipt reconciliation failed:', failure.log);
+    return NextResponse.json(failure.body, { status: failure.status, headers: failure.headers });
   }
 }

@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --import ./tests/resolve-ts.mjs --test tests/snapscan.test.mts"
+    "test": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --test tests/snapscan.test.mts"
   },
   "dependencies": {
     "next": "15.5.9",

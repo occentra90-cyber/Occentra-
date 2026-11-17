@@ -25,10 +25,12 @@ export function createSnapscanPaymentUrl(reference: string, amountCents: number,
   url.searchParams.set('id', reference);
   url.searchParams.set('amount', String(amountCents));
   url.searchParams.set('strict', 'true');
-  url.searchParams.set('s_url', base + (base.includes('?') ? '&' : '?') + 'payment=returned&provider=snapscan');
-  url.searchParams.set('f_url', base + (base.includes('?') ? '&' : '?') + 'payment=failed&provider=snapscan');
+  // SnapScan limits SnapCode URLs to 256 characters. A single fallback return
+  // works for both outcomes; we independently verify payment after returning.
   url.searchParams.set('r_url', base + (base.includes('?') ? '&' : '?') + 'payment=returned&provider=snapscan');
-  return url.toString();
+  const checkoutUrl = url.toString();
+  if (checkoutUrl.length > 256) throw new Error('SnapScan checkout URL is too long');
+  return checkoutUrl;
 }
 
 export type SnapscanPayment = {

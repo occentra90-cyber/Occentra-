@@ -9,8 +9,17 @@ test('builds a fixed-amount, strictly referenced QR URL without exposing a priva
   assert.equal(url.searchParams.get('amount'), '2000');
   assert.equal(url.searchParams.get('id'), 'order-123');
   assert.equal(url.searchParams.get('strict'), 'true');
-  assert.equal(url.searchParams.get('s_url'), 'https://occentra-occentra.vercel.app/?payment=returned&provider=snapscan');
+  assert.equal(url.searchParams.get('r_url'), 'https://occentra-occentra.vercel.app/?payment=returned&provider=snapscan');
+  assert.equal(url.searchParams.has('s_url'), false);
+  assert.equal(url.searchParams.has('f_url'), false);
+  assert.ok(url.toString().length <= 256);
   assert.ok(!url.toString().includes('design='));
+});
+
+test('cover-letter QR also fits the SnapScan 256-character limit', () => {
+  const url = new URL(createSnapscanPaymentUrl('a0579bfd-9f56-4f86-a71e-1e9ee37e5fbd', 1500, '/cover-letters?template=executive'));
+  assert.ok(url.toString().length <= 256);
+  assert.equal(url.searchParams.get('r_url'), 'https://occentra-occentra.vercel.app/cover-letters?template=executive&payment=returned&provider=snapscan');
 });
 
 test('recognises only exact completed payment, amount and merchant reference', () => {

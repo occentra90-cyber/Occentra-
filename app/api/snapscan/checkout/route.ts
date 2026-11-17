@@ -40,7 +40,10 @@ export async function POST(request: Request) {
     const { data: linked, error: linkError } = await db.from('guest_designs')
       .update({ purchase_id: purchase.id }).eq('id', design.id).is('purchase_id', null).eq('status', 'draft').select('id').maybeSingle();
     if (linkError || !linked) return NextResponse.json({ error: 'Could not link saved design' }, { status: 409 });
-    return NextResponse.json({ url: paymentUrl }, { headers: { 'Cache-Control': 'no-store' } });
+    // Send the same random reference back to the initiating browser so it can
+    // resume this exact order even when the SnapScan app does not redirect.
+    console.info('SnapScan checkout created', { orderSuffix: reference.slice(-6), templateId: design.template_id });
+    return NextResponse.json({ url: paymentUrl, reference }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return NextResponse.json({ error: 'SnapScan checkout is unavailable' }, { status: 503 });
   }

@@ -13,14 +13,18 @@ export function snapscanConfigured() {
     Boolean(process.env.SNAPSCAN_WEBHOOK_AUTH_KEY) && snapscanVerificationConfigured();
 }
 
-export function createSnapscanPaymentUrl(reference: string, amountCents: number, returnPath: string) {
+export function createSnapscanPaymentUrl(reference: string, amountCents: number, returnPath: string, returnOrigin?: string) {
   const url = new URL(process.env.SNAPSCAN_PAYMENT_URL || snapscanPaymentUrl);
   if (url.protocol !== 'https:' || url.hostname !== 'pos.snapscan.io' || !/^\/qr\/[a-zA-Z0-9_-]+$/.test(url.pathname)) {
     throw new Error('Invalid SnapScan payment URL');
   }
   const site = new URL(process.env.OCCENTRA_PUBLIC_URL || occentraPublicUrl);
   if (site.protocol !== 'https:' || site.username || site.password || site.search || site.hash) throw new Error('Invalid public website URL');
-  const base = site.origin + returnPath;
+  // Return to the exact trusted hostname where the user began checkout so
+  // their browser can recover the private design token saved before payment.
+  const trustedOrigins = new Set([site.origin, 'https://occentra.vercel.app', 'https://occentra-occentra.vercel.app']);
+  if (returnOrigin && !trustedOrigins.has(returnOrigin)) throw new Error('Invalid payment return origin');
+  const base = (returnOrigin || site.origin) + returnPath;
   url.search = '';
   url.searchParams.set('id', reference);
   url.searchParams.set('amount', String(amountCents));

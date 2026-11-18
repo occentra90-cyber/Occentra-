@@ -265,6 +265,13 @@ export default function Home() {
   const [recoveredPaidCopy, setRecoveredPaidCopy] = useState(false);
   const [verificationAttempt, setVerificationAttempt] = useState(0);
   const paidReceiptRef = useRef(false);
+  // Return-from-SnapScan bookkeeping: keep what the customer types, open the editor only once,
+  // and let async responses see the current selection rather than a stale render.
+  const selectedRef = useRef<Design | null>(null);
+  selectedRef.current = selected;
+  const editedRef = useRef(false);
+  const editorRestoredRef = useRef(false);
+  const autoOpenedRef = useRef(false);
 
   useEffect(() => {
     fetch('/api/snapscan/config', { cache: 'no-store' })
@@ -281,14 +288,19 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const token = privateDesignToken();
-    // A returned order is authoritative; wait for its authenticated payment
-    // reconciliation before restoring any possibly stale browser design token.
+    let token = privateDesignToken();
     let savedOrder = '';
     try { savedOrder = localStorage.getItem('occentra_snapscan_cv_order') || ''; } catch {}
-    if (selectSnapscanOrder({ returned: new URLSearchParams(window.location.search).get('o'), stored: savedOrder })) return;
-    if (!token) return;
-    fetch('/api/guest/design?token=' + encodeURIComponent(token), { cache: 'no-store' })
+    const order = selectSnapscanOrder({ returned: new URLSearchParams(window.location.search).get('o'), stored: savedOrder });
+    if (!token && order) {
+      try { token = localStorage.getItem('occentra_snapscan_cv_token') || sessionStorage.getItem('occentra_snapscan_token'); } catch {}
+    }
+    if (!token || !/^[a-f0-9]{64}$/.test(token)) return;
+    const privateToken = token;
+    // Coming back from SnapScan, open the customer's own editor straight away instead of the
+    // gallery. With an order present the server also confirms that this saved design belongs to
+    // that exact order, so a stale token from an earlier attempt can never open the wrong purchase.
+    fetch('/api/guest/design?token=' + encodeURIComponent(privateToken) + (order ? '&order=' + encodeURIComponent(order) : ''), { cache: 'no-store' })
       .then(async response => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Private link unavailable');
@@ -297,17 +309,22 @@ export default function Home() {
       .then(design => {
         const entry = designs.find(d => d.id === design.template_id);
         if (!entry) throw new Error('Template unavailable');
+        if (editedRef.current) return; // never overwrite what the customer has already typed
+        editorRestoredRef.current = true;
+        autoOpenedRef.current = true;
         setSelected(entry);
         setFields({ ...defaults, ...design.fields });
         setLiving(Boolean(design.settings?.living));
         setMotion(design.settings?.motion !== false);
         setSparkles(design.settings?.sparkles !== false);
-        setGuestToken(token);
+        setGuestToken(privateToken);
         setGuestExpiry(design.expires_at);
         setGuestLocked(design.status === 'paid');
-        setNotice(design.status === 'paid' ? 'Payment verified. Download your CV below as many times as you need.' : 'Payment was not completed. You can continue editing and pay when ready.');
+        window.scrollTo(0, 0);
+        // With an order in flight the verification loop owns the status message.
+        if (!order) setNotice(design.status === 'paid' ? 'Payment verified. Download your CV below as many times as you need.' : 'Payment was not completed. You can continue editing and pay when ready.');
       })
-      .catch(error => setNotice(error instanceof Error ? error.message : 'Unable to open private link'));
+      .catch(error => { if (!order) setNotice(error instanceof Error ? error.message : 'Unable to open private link'); });
   }, []);
 
   useEffect(() => {
@@ -344,7 +361,7 @@ export default function Home() {
     paidReceiptRef.current = false;
     setReceiptOrder(activeCvOrder);
     setVerifyingCv(true);
-    setNotice('Checking this exact SnapScan order. Please do not pay again.');
+    setNotice('Checking your SnapScan payment. If you were charged, please wait and do not pay again. If you cancelled, choose “Start a separate purchase” below.');
     let active = true;
     let inFlight = false;
     let attempts = 0;
@@ -374,12 +391,12 @@ export default function Home() {
           const token = privateDesignToken() || guestToken;
           if (token && /^[a-f0-9]{64}$/.test(token)) {
             try {
-              const savedResponse = await fetch('/api/guest/design?token=' + encodeURIComponent(token), { cache: 'no-store' });
+              const savedResponse = await fetch('/api/guest/design?token=' + encodeURIComponent(token) + '&order=' + encodeURIComponent(activeCvOrder), { cache: 'no-store' });
               const saved = await savedResponse.json();
               const design = saved.design;
               if (savedResponse.ok && design?.status === 'paid' && design.template_id === result.templateId) {
                 if (!active) return;
-                setFields({ ...defaults, ...design.fields });
+                if (!editedRef.current) setFields({ ...defaults, ...design.fields });
                 setLiving(Boolean(design.settings?.living));
                 setMotion(design.settings?.motion !== false);
                 setSparkles(design.settings?.sparkles !== false);
@@ -394,18 +411,29 @@ export default function Home() {
           if (!originalRestored) {
             // A still-open editor may already hold the customer's fields.
             // Keep them rather than replacing them with sample content.
-            if (selected?.id !== result.templateId) setFields(defaults);
+            if (selectedRef.current?.id !== result.templateId && !editedRef.current) setFields(defaults);
             setGuestToken('');
             setRecoveredPaidCopy(true);
           }
           setSelected(entry);
           setGuestLocked(true);
+          window.scrollTo(0, 0);
           paidReceiptRef.current = true;
           setVerifyingCv(false);
           setNotice(originalRestored
             ? 'Payment verified. Your saved CV is unlocked and ready to download.'
             : 'Payment verified. This browser did not retain your original details. You can edit this paid CV copy and download it without paying again.');
           return;
+        }
+        if (response.ok && result.found && result.templateId && !autoOpenedRef.current && !editorRestoredRef.current &&
+            !selectedRef.current && new URLSearchParams(window.location.search).has('o')) {
+          const entry = designs.find(d => d.id === result.templateId && d.category === 'cv');
+          if (entry) {
+            autoOpenedRef.current = true;
+            setSelected(entry);
+            setFields(defaults);
+            window.scrollTo(0, 0);
+          }
         }
         if (response.ok && result.found === false) {
           setVerifyingCv(false);
@@ -505,7 +533,7 @@ export default function Home() {
     }
   }
 
-  const update = (key: keyof Fields, value: string) => setFields((old) => ({ ...old, [key]: value }));
+  const update = (key: keyof Fields, value: string) => { editedRef.current = true; setFields((old) => ({ ...old, [key]: value })); };
 
   function open(d: Design) {
     setSelected(d);
@@ -718,7 +746,7 @@ export default function Home() {
           </main>
         </>
       ) : (
-        <main className="container">
+        <main className={'container' + (chosen.category === 'cv' && !guestLocked ? ' print-locked' : '')}>
           <button
             className="back"
             onClick={() => {

@@ -8,6 +8,6 @@ export default function LegalPage() {
   return <main style={{maxWidth:820,margin:'0 auto',padding:'42px 22px 70px',lineHeight:1.75}}>
     <Link href="/" style={{color:'#856632'}}>← Back to Occentra</Link>
     <h1 style={{fontFamily:'Georgia,serif',fontSize:'clamp(30px,5vw,42px)',color:'#14263d'}}>Refund Policy</h1>
-    {content.split('\\n\\n').map((section,i)=>section.startsWith('## ')?<h2 key={i} style={{fontFamily:'Georgia,serif',marginTop:28,color:'#14263d'}}>{section.slice(3)}</h2>:<p key={i} style={{whiteSpace:'pre-line'}}>{section.replace(/\\*\\*/g,'')}</p>)}
+    {content.split(String.fromCharCode(10,10)).map((section,i)=>section.startsWith('## ')?<h2 key={i} style={{fontFamily:'Georgia,serif',marginTop:28,color:'#14263d'}}>{section.slice(3)}</h2>:<p key={i} style={{whiteSpace:'pre-line'}}>{section.replaceAll('**','')}</p>)}
   </main>;
 }

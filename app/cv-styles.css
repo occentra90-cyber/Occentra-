@@ -136,3 +136,9 @@
     max-width: none;
   }
 }
+
+/* Deterrent only (the page is rendered in the browser): an unpaid CV prints as a payment notice. */
+@media print {
+  .print-locked .cv-sheet { display: none !important; }
+  .print-locked::before { content: "Payment required: pay on the Occentra page to download this CV."; display: block; padding: 40px; font: 18px Arial, sans-serif; }
+}

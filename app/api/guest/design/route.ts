@@ -32,7 +32,7 @@ function validSettings(x: unknown): x is Record<string, boolean> {
     Object.entries(x).every(([k, v]) => k.length <= 50 && typeof v === 'boolean');
 }
 async function lookup(token: string) {
-  return db().from('guest_designs').select('id,template_id,category,title,fields,settings,status,created_at,expires_at')
+  return db().from('guest_designs').select('id,template_id,category,title,fields,settings,status,created_at,expires_at,purchase_id')
     .eq('token_hash', hash(token)).maybeSingle();
 }
 export async function POST(request: Request) {
@@ -56,12 +56,25 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get('token') || '';
   if (!tokenPattern.test(token)) return fail('Invalid private link', 400);
+  const order = new URL(request.url).searchParams.get('order');
+  if (order !== null && !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(order)) return fail('Invalid order', 400);
   try {
     await purgeExpired();
     const { data, error } = await lookup(token);
     if (error) throw error;
     if (!data || (data.status !== 'paid' && Date.parse(data.expires_at) <= Date.now())) return fail('This link has expired or is unavailable', 404);
-    return NextResponse.json({ design: data }, { headers: { 'Cache-Control': 'no-store' } });
+    // After a payment the browser asks for its saved design together with the order it is returning
+    // for. The design must be linked to that exact order, so a stale token from an earlier attempt
+    // can never open the wrong purchase.
+    if (order) {
+      const { data: purchase, error: purchaseError } = data.purchase_id
+        ? await db().from('purchases').select('merchant_reference').eq('id', data.purchase_id).maybeSingle()
+        : { data: null, error: null };
+      if (purchaseError) throw purchaseError;
+      if (!purchase || purchase.merchant_reference !== order) return fail('This saved design belongs to a different order', 409);
+    }
+    const { purchase_id: _internal, ...design } = data;
+    return NextResponse.json({ design }, { headers: { 'Cache-Control': 'no-store' } });
   } catch { return fail('Unable to load design', 503); }
 }
 export async function PATCH(request: Request) {

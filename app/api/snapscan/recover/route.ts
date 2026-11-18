@@ -29,20 +29,22 @@ export async function POST(request: Request) {
     }
     const result = await reconcileSnapscanPayment(reference);
     console.info('SnapScan trace', { event: 'receipt_reconciled', reference, result });
+    if (result === 'unknown') return respond({ paid: false, found: false });
+    const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: order, error: orderError } = await db.from('purchases')
+      .select('template_id').eq('merchant_reference', reference).maybeSingle();
+    if (orderError) throw fromDatabaseError(orderError);
+    const templateId = order && /^(cv-[0-5]|cover-(classic|navy|sage|executive))$/.test(order.template_id) ? order.template_id : undefined;
     if (result === 'paid') {
-      const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { persistSession: false, autoRefreshToken: false } });
-      const { data: order, error: orderError } = await db.from('purchases')
-        .select('template_id').eq('merchant_reference', reference).maybeSingle();
-      if (orderError) throw fromDatabaseError(orderError);
       // A verified receipt restores entitlement to its purchased template,
       // never to a private CV or cover-letter draft containing personal data.
-      if (!order || !/^(cv-[0-5]|cover-(classic|navy|sage|executive))$/.test(order.template_id)) {
-        return respond({ error: 'This receipt is not for an available template' }, 400);
-      }
-      return respond({ paid: true, found: true, templateId: order.template_id });
+      if (!templateId) return respond({ error: 'This receipt is not for an available template' }, 400);
+      return respond({ paid: true, found: true, templateId });
     }
-    return respond({ paid: false, found: result !== 'unknown' });
+    // Still unpaid: the template is public catalogue information, and lets the page reopen the
+    // right editor for a customer returning from SnapScan in a browser that kept no saved draft.
+    return respond({ paid: false, found: true, templateId });
   } catch (error) {
     // Distinguish "retry will help" (503) from "needs a human" (409) instead of one generic message.
     if (error instanceof SyntaxError) return respond({ error: 'Invalid request' }, 400);

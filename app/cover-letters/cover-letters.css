@@ -21,3 +21,9 @@
 .letters-payment summary{cursor:pointer;font-weight:700;color:#8f6b3e;margin-bottom:16px}
 .letters-payment .letters-secondary{background:#fff;color:#6e573d;border:1px solid #bda17e;margin-top:14px;font-size:14px}
 @media print{.letters-payment{display:none!important}}
+
+/* Deterrent only (the page is rendered in the browser): an unpaid letter prints as a payment notice. */
+@media print{
+.letters-site.print-locked .letter-paper,.letters-site.print-locked .letter-paper *{visibility:hidden!important}
+.letters-site.print-locked::before{content:"Payment required: pay on the Occentra page to download this cover letter.";visibility:visible!important;position:absolute;top:0;left:0;padding:40px;font:18px Arial,sans-serif}
+}

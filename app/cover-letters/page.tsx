@@ -58,6 +58,9 @@ const [recovering,setRecovering]=useState(false);
 const [verifyingReturn,setVerifyingReturn]=useState(false);
 const [activeOrder,setActiveOrder]=useState('');
 const paidReceiptRef=useRef(false);
+// Return-from-SnapScan bookkeeping: keep what the customer types, and open the editor once.
+const editedRef=useRef(false);const restoredRef=useRef(false);const autoOpenedRef=useRef(false);const editingRef=useRef(false);
+editingRef.current=editing;
 const letter=drafts[active];const template=templates[active];
 useEffect(()=>{
  fetch('/api/snapscan/config',{cache:'no-store'})
@@ -81,8 +84,29 @@ useEffect(()=>{
  paidReceiptRef.current=false;
  setReceiptOrder(activeOrder);
  setVerifyingReturn(true);
- setNotice('Checking your SnapScan payment automatically. Please wait; you do not need to pay again.');
+ setNotice('Checking your SnapScan payment. If you were charged, please wait and do not pay again. If you cancelled, choose “Start a separate checkout” below.');
  let stopped=false;let attempts=0;let inFlight=false;let timer:ReturnType<typeof setTimeout>|undefined;
+ // Coming back from SnapScan, open the customer's own letter straight away instead of the template
+ // list. The server confirms the saved letter belongs to this exact order, so a stale token from
+ // an earlier attempt can never open the wrong purchase.
+ try{
+  const savedToken=new URLSearchParams(window.location.search).get('design')||
+   sessionStorage.getItem('occentra_snapscan_token')||localStorage.getItem('occentra_snapscan_token')||'';
+  if(/^[a-f0-9]{64}$/.test(savedToken)){
+   fetch('/api/guest/design?token='+encodeURIComponent(savedToken)+'&order='+encodeURIComponent(activeOrder),{cache:'no-store'})
+    .then(async r=>({ok:r.ok,body:await r.json()}))
+    .then(({ok,body})=>{
+     const design=body?.design;
+     if(!ok||!design||stopped||editedRef.current||typeof design.template_id!=='string')return;
+     const index=templates.findIndex(t=>'cover-'+t.id===design.template_id);
+     if(index<0)return;
+     restoredRef.current=true;autoOpenedRef.current=true;
+     setDrafts(old=>old.map((d,i)=>i===index?design.fields as Letter:d));
+     setActive(index);setEditing(true);setPaymentToken(savedToken);
+     window.scrollTo(0,0);
+    }).catch(()=>{});
+  }
+ }catch{}
  const check=async()=>{
   if(stopped||paidReceiptRef.current||inFlight)return;
   if(document.visibilityState==='hidden')return; // Visibility change will trigger an immediate fresh check.
@@ -102,18 +126,23 @@ useEffect(()=>{
        sessionStorage.getItem('occentra_snapscan_token')||localStorage.getItem('occentra_snapscan_token')||''}catch{}
      if(/^[a-f0-9]{64}$/.test(privateToken)){
       try{
-       const saved=await fetch('/api/guest/design?token='+encodeURIComponent(privateToken),{cache:'no-store'});
+       const saved=await fetch('/api/guest/design?token='+encodeURIComponent(privateToken)+'&order='+encodeURIComponent(activeOrder),{cache:'no-store'});
        const record=await saved.json();
-       if(saved.ok&&record.design?.status==='paid'&&record.design?.template_id===result.templateId){
+       if(saved.ok&&record.design?.status==='paid'&&record.design?.template_id===result.templateId&&!editedRef.current){
         setDrafts(old=>old.map((d,i)=>i===index?record.design.fields as Letter:d));
        }
       }catch{}
      }
      if(stopped||paidReceiptRef.current)return;
-     paidReceiptRef.current=true;setActive(index);setEditing(true);setPaid(true);
+     paidReceiptRef.current=true;setActive(index);setEditing(true);setPaid(true);window.scrollTo(0,0);
      setNotice('Payment verified automatically. Your cover letter is ready to edit and download.');
     }else setNotice('Payment was confirmed for a different product.');
     return;
+   }
+   if(response.ok&&result.found&&result.templateId&&!autoOpenedRef.current&&!restoredRef.current&&!editingRef.current&&
+      new URLSearchParams(window.location.search).has('o')){
+    const index=templates.findIndex(t=>'cover-'+t.id===result.templateId);
+    if(index>=0){autoOpenedRef.current=true;setActive(index);setEditing(true);window.scrollTo(0,0)}
    }
    if(!response.ok&&response.status>=400&&response.status<500){
     setVerifyingReturn(false);
@@ -277,11 +306,11 @@ function startNewPurchase(){
  window.history.replaceState({},'','/cover-letters?template='+template.id);
 }
 
-const update=(key:keyof Letter,value:string)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,[key]:value}:d));
-const addParagraph=()=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:[...d.paragraphs,'']}:d));
-const removeParagraph=(index:number)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:d.paragraphs.filter((_,j)=>j!==index)}:d));
-const updateParagraph=(index:number,value:string)=>setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:d.paragraphs.map((p,j)=>j===index?value:p)}:d));
-return <div className="letters-site">
+const update=(key:keyof Letter,value:string)=>{editedRef.current=true;setDrafts(old=>old.map((d,i)=>i===active?{...d,[key]:value}:d))};
+const addParagraph=()=>{editedRef.current=true;setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:[...d.paragraphs,'']}:d))};
+const removeParagraph=(index:number)=>{editedRef.current=true;setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:d.paragraphs.filter((_,j)=>j!==index)}:d))};
+const updateParagraph=(index:number,value:string)=>{editedRef.current=true;setDrafts(old=>old.map((d,i)=>i===active?{...d,paragraphs:d.paragraphs.map((p,j)=>j===index?value:p)}:d))};
+return <div className={'letters-site'+(editing&&!paid?' print-locked':'')}>
 <div className="letters-top"><Link href="/">← Occentra Home</Link><strong>OCCENTRA</strong><span>Editable Cover Letters</span></div>
 <main className="letters-main">{!editing && <div className="letters-intro"><span>JOB APPLICATION ESSENTIALS</span><h1>Cover letters that look professional.</h1><p>Choose a design and customise the complete sample letter. Your edits appear immediately. The names and employers shown are fictional examples.</p></div>}
 {!editing && <div className="letters-grid">{templates.map((t,i)=><button type="button" className={'letter-choice '+(active===i?'chosen':'')} key={t.id} onClick={()=>{setActive(i);setEditing(true);setNotice('');window.history.replaceState({},'', '/cover-letters?template='+t.id)}} aria-pressed={active===i}><div className={'letter-thumb theme-'+t.id}><div className="thumb-name">{t.sample.name}</div><div className="thumb-line"/><div className="thumb-line short"/><div className="thumb-gap"/>{Array.from({length:9},(_,j)=><div className={'thumb-line '+(j%3===0?'short':'')} key={j}/>)}</div><b>{t.title}</b><small>{t.role} · R15</small></button>)}</div>}
